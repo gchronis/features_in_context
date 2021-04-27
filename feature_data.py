@@ -21,7 +21,7 @@ class FeatureNorms:
         for pair in cue_feature_pairs:
             word = pair.cue
             words[word] += 1
-            feature = pair.feature
+            feature = pair.translated
             feature_index = feature_map.add_and_get_index(feature)
             value = pair.normalized_feature
 
@@ -37,8 +37,11 @@ class FeatureNorms:
 
     def get_features(self, word):
         norm = self.feature_norms[word]
-        print(norm)
-        raise Exception("Implement me!@ like in mini 1")
+        feats = []
+        for i in norm:
+            feat = self.feature_map.get_object(i)
+            feats.append(feat)
+        return feats
 
     def get_feature_vector(self, word):
         norm = self.feature_norms[word]
@@ -55,10 +58,10 @@ class FeatureNorms:
             pretty[name] = norm[feat]
         print("features for %s: %s" % (word, pretty))
 
-    def top_10(self, word):
+    def top_n(self, word, n):
         norm = self.feature_norms[word]
         norm = {k: v for k, v in sorted(norm.items(), key=lambda item: item[1])}
-        top_10 = list(norm)[:10]
+        top_10 = list(norm)[:n]
 
         feats = []
         for i in top_10:

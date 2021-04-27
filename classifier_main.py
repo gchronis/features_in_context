@@ -26,6 +26,10 @@ def _parse_args():
     parser.add_argument('--test_output_path', type=str, default='geo_test_output.tsv', help='path to write blind test results')
     parser.add_argument('--domain', type=str, default='geo', help='domain (geo for geoquery)')
     parser.add_argument('--print_dataset', dest='print_dataset', default=False, action='store_true', help="Print some sample data on loading")
+    parser.add_argument('--model', type=str, default='regression', help='regression binary frequency modads')
+    parser.add_argument('--layer', type=int, default=8, help='layer of BERT embeddings to use')
+    parser.add_argument('--clusters', type=int, default=1, help='number of lexical prototypes in each BERT multi-prototype embedding')
+
     add_models_args(parser) # defined in models.py
 
     args = parser.parse_args()
@@ -125,10 +129,11 @@ if __name__ == '__main__':
     print(args)
     random.seed(args.seed)
     np.random.seed(args.seed)
-    # Load the training and test data
 
+    # Load the training and test data
     feature_norms = read_feature_norms('data/buchanan/cue_feature_words.csv')
-    multipro_embs = read_multiprototype_embeddings('./data/multipro_embeddings/layer8clusters1.txt', layer=8, num_clusters=1)
+    embedding_file = './data/multipro_embeddings/layer'+ str(args.layer) + 'clusters' + str(args.clusters) + '.txt'
+    multipro_embs = read_multiprototype_embeddings(embedding_file, layer=args.layer, num_clusters=args.clusters)
 
 
     train_words, dev_words, test_words = prepare_data(feature_norms, multipro_embs)
@@ -140,20 +145,23 @@ if __name__ == '__main__':
         #print("Here are some examples post tokenization and indexing:")
         #for i in range(0, min(len(train_data_indexed), 10)):
         #    print(train_data_indexed[i])
+    start = time.time()
     if args.do_dumb_thing:
         decoder = DumbClassifier(train_data_indexed)
-    else:
-        start = time.time()
-        model = train_classifier(train_words, dev_words, multipro_embs, feature_norms, args)
-        end = time.time()
-        print("Time elapsed during training: %s seconds" % (end - start))
-    #print("=======TRAIN SET=======")
-    #evaluate(train_data_indexed, decoder, use_java=args.perform_java_eval)
-    #print("=======DEV SET=======")
-    #evaluate(dev_data_indexed, decoder, use_java=args.perform_java_eval)
-    #print("=======FINAL PRINTING ON BLIND TEST=======")
+    elif args.model == 'binary':
+        model = train_binary_classifier(train_words, dev_words, multipro_embs, feature_norms, args)
+    elif args.model == 'regression':
+        model = train_regressor(train_words, dev_words, multipro_embs, feature_norms, args)
+    end = time.time()
+
+    print("Time elapsed during training: %s seconds" % (end - start))
+    print("=======TRAIN SET=======")
+    evaluate(model, train_words, feature_norms, args, debug='false')
+    print("=======DEV SET=======")
+    evaluate(model, dev_words, feature_norms, args, debug='false')
+    print("=======FINAL PRINTING ON TEST SET=======")
     # temporarily stop saving test output data bc we already have VERY GOOD test output
-    #evaluate(test_data_indexed, decoder, print_output=False, outfile=test_output_path, use_java=args.perform_java_eval)
+    evaluate(model, test_words, feature_norms, args, debug='false')
     #evaluate(test_data_indexed, decoder, print_output=False, outfile=None, use_java=args.perform_java_eval)
 
 

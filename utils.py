@@ -1,5 +1,9 @@
 # utils.py
+import numpy as np
 
+def sigmoid(z):
+    # if z is too negative, the exp overflows, so return zero.
+    return 1.0 / (1 + np.exp(-z))
 
 class Indexer(object):
     """
