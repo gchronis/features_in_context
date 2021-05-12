@@ -12,7 +12,7 @@ class FeatureNorms:
     """
     Indexed list of feature norm objects
     """
-    def __init__(self, cue_feature_pairs):
+    def __init__(self, cue_feature_pairs, normalized=True):
         feature_map = Indexer()
         words = Counter()
 
@@ -21,9 +21,16 @@ class FeatureNorms:
         for pair in cue_feature_pairs:
             word = pair.cue
             words[word] += 1
-            feature = pair.translated
+
+            if normalized == True:
+                feature = pair.translated
+                # i think before we were using the untranslated value rather than the translated value...what does this mean? will we see improvement if we retrain?
+                value = pair.normalized_translated
+            else:
+                feature = pair.feature
+                value = pair.normalized_feature
+
             feature_index = feature_map.add_and_get_index(feature)
-            value = pair.normalized_feature
 
             if word in norms:
                 norms[word][feature_index] = value
@@ -108,7 +115,7 @@ class CueFeaturePair:
         self.frequency_translated = float(attributes["frequency_translated"])
         self.n = attributes["n"]
         self.normalized_feature = float(attributes["normalized_feature"])
-        self.normalized_translated = float(attributes["normalized_translated"])
+        self.normalized_translated = float(attributes["normalized_translated"]) # this is the normalized value of the 'translated' string
         self.pos_cue = attributes["pos_cue"]
         self.pos_feature = attributes["pos_feature"]
         self.pos_translated = attributes["pos_translated"]
