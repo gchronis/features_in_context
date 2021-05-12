@@ -7,6 +7,7 @@ from collections import Counter
 from multiprototype import *
 from feature_data import *
 import torch.nn as nn
+import torch.nn.functional as F
 from torch import optim
 import random
 from scipy.spatial.distance import cosine
@@ -30,7 +31,7 @@ def add_models_args(parser):
     # 50-200 might be a good range to start with for embedding and LSTM sizes
     #parser.add_argument('--embedding_size', type=int, default=50, help='size of embedding to train')
     #parser.add_argument('--pretrained', type=bool, default=True, help='Boolean indicating whether to start with pretrained vectors')
-    #parser.add_argument('--embedding_dropout', type=float, default=0.2, help='Embedding dropout probability')
+    parser.add_argument('--dropout', type=float, default=0.5, help='dropout probability')
 
 
 # class DumbClassifier(object):
@@ -92,10 +93,54 @@ class FeatureClassifier(object):
         x = form_input(word, self.word_vectors)
         logits = self.nn.forward(x)
         logits = logits.detach().numpy()
+
+        # these are in shape [k x n]  where k is the number of prototypes
+        # you need to choose somehow which embedding or which predicted features to select
+        # for the time being, lets take the max of the values predicted for each feature
+        # however this seems really wrong.
+
+        #print(logits[:, :10])
+
+        #agg = np.average(logits, axis = 0)
+        #print(agg)
+        #raise Exception("STOP thief!")
         return logits
 
     def predict_top_n_features(self, word: str, n: int):
         logits = self.predict(word)
+        #logits = logits.detach().numpy()
+    
+        # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
+        # Newer NumPy versions (1.8 and up) have a function called argpartition for this. To get the indices of the four largest elements, do
+        ind = np.argpartition(logits, -n)[-n:]
+
+        feats = []
+        for i in ind:
+            feat = self.feature_norms.feature_map.get_object(i)
+            feats.append(feat)
+
+        #print(feats)
+        return feats
+
+    def predict_in_context(self, word, sentence, bert):
+        # generate bert vector for word
+        vec = bert.get_bert_vectors_for(word, sentence)
+        # get the layer we care about
+        vec = vec[8]
+        #print(vec.shape)
+
+        # put it ias the only prototype in a bag
+        vec = np.array([vec])
+
+        # form input in context
+        x =  torch.from_numpy(vec).float()
+        logits = self.nn.forward(x)
+        logits = logits.detach().numpy()
+
+        return logits
+
+    def predict_top_n_features_in_context(self, word, sentence, n, bert=None):
+        logits = self.predict_in_context(word, sentence, bert)
         #logits = logits.detach().numpy()
     
         # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
@@ -153,6 +198,76 @@ class BinaryClassifier(object):
         #print(feats)
         return feats
 
+
+# Luong attention layer
+class Attention(nn.Module):
+    def __init__(self, method, hidden_size):
+        super(Attention, self).__init__()
+        self.method = method
+        if self.method not in ['dot', 'general', 'concat']:
+            raise ValueError(self.method, "is not an appropriate attention method.")
+        self.hidden_size = hidden_size
+        if self.method == 'general':
+            self.attn = nn.Linear(self.hidden_size, hidden_size)
+        elif self.method == 'concat':
+            self.attn = nn.Linear(self.hidden_size * 2, hidden_size)
+            self.v = nn.Parameter(torch.FloatTensor(hidden_size))
+
+    def dot_score(self, hidden, encoder_output):
+        #energy = self.attn(encoder_output)
+        return torch.sum(hidden * encoder_output, dim=2)
+
+    def general_score(self, hidden, encoder_output):
+        energy = self.attn(encoder_output)
+        return torch.sum(hidden * energy, dim=2)
+
+    def concat_score(self, hidden, encoder_output):
+        energy = self.attn(torch.cat((hidden.expand(encoder_output.size(0), -1, -1), encoder_output), 2)).tanh()
+        return torch.sum(self.v * energy, dim=2)
+
+    def forward(self, hidden, encoder_outputs):
+        # Calculate the attention weights (energies) based on the given method
+        if self.method == 'general':
+            attn_energies = self.general_score(hidden, encoder_outputs)
+        elif self.method == 'concat':
+            attn_energies = self.concat_score(hidden, encoder_outputs)
+        elif self.method == 'dot':
+            attn_energies = self.dot_score(hidden, encoder_outputs)
+
+        # Transpose max_length and batch_size dimensions
+        attn_energies = attn_energies.t()
+
+        # Return the softmax normalized probability scores (with added dimension)
+        return F.softmax(attn_energies, dim=1).unsqueeze(1)
+
+class AttentionSoftMax(torch.nn.Module):
+    def __init__(self, in_features = 1, out_features = None):
+        """
+        given a tensor `x` with dimensions [N * M],
+        where M -- dimensionality of the feature vector
+                   (number of features per instance)
+              N -- number of instances
+        initialize with `AggModule(M)`
+        returns:
+        - weighted result: [M]
+        - gate: [N]
+        """
+        super(AttentionSoftMax, self).__init__()
+        self.otherdim = ''
+        if out_features is None:
+            out_features = in_features
+        self.layer_linear_tr = nn.Linear(in_features, out_features)
+        self.activation = nn.LeakyReLU()
+        self.layer_linear_query = nn.Linear(out_features, 1)
+        
+    def forward(self, x):
+        keys = self.layer_linear_tr(x)
+        keys = self.activation(keys)
+        attention_map_raw = self.layer_linear_query(keys)[...,0]
+        attention_map = nn.Softmax(dim=-1)(attention_map_raw)
+        result = torch.einsum(f'{self.otherdim}i,{self.otherdim}ij->{self.otherdim}j', attention_map, x)
+        return result, attention_map
+
 class FFNN(nn.Module):
     """
     Defines the core neural network for doing multiclass classification over a single datapoint at a time. This consists
@@ -164,7 +279,7 @@ class FFNN(nn.Module):
     The forward() function does the important computation. The backward() method is inherited from nn.Module and
     handles backpropagation.
     """
-    def __init__(self, inp, hid, out):
+    def __init__(self, inp, hid, out, bag_size, dropout):
         """
         Constructs the computation graph by instantiating the various layers and initializing weights.
 
@@ -183,10 +298,24 @@ class FFNN(nn.Module):
         # Initialize weights according to a formula due to Xavier Glorot.
         #nn.init.xavier_uniform_(self.V.weight)
         #nn.init.xavier_uniform_(self.W.weight)
+
+        self.dropout = nn.Dropout(p=0.5)
+
         self.num_classes = out
         # Initialize with zeros instead
         nn.init.zeros_(self.V.weight)
         nn.init.zeros_(self.W.weight)
+
+
+        #self.attn = Attention('dot', hid)
+        self.attn = AttentionSoftMax(inp , out_features = None)
+
+
+        # self.attention = nn.Sequential(
+        #     nn.Linear(inp, hid),
+        #     nn.Tanh(),
+        #     nn.Linear(hid, out)
+        # )
 
 
     def forward(self, x):
@@ -198,7 +327,26 @@ class FFNN(nn.Module):
         probabilities or a tuple of (loss, log probability) if you want to pass in y to this function as well
         """
         #return self.log_softmax(self.W(self.g(self.V(x))))
-        return self.W(self.g(self.V(x)))
+
+
+        # |x| = N X K
+        #print(x.size())
+        weighted_avg, A = self.attn(x)  # NxK
+        #print("attention energies: ", A.size())
+        #print("attention output: ", weighted_avg.size())
+
+        #raise Exception("djwfhel")
+
+
+        #A = torch.transpose(A, 1, 0)  # KxN
+        #A = F.softmax(A, dim=1)  # softmax over N
+
+        #M = torch.mm(A, x)  # KxL
+        return self.dropout(self.W(self.g(self.V(weighted_avg))))
+
+def dot_score(self, hidden, encoder_output):
+    #energy = self.attn(encoder_output)
+    return torch.sum(hidden * encoder_output, dim=2)
 
 
 def form_input(word: str, embs: MultiProtoTypeEmbeddings):
@@ -210,7 +358,7 @@ def form_input(word: str, embs: MultiProtoTypeEmbeddings):
     """
     TODO implement bag. for now just average things together
     """
-    vec = np.average(vec, axis=0)
+    #vec = np.average(vec, axis=0)
 
 
     vec =  torch.from_numpy(vec).float()
@@ -238,8 +386,10 @@ def train_regressor(train_exs: List[str], dev_exs: List[str], multipro_embs: Mul
     hidden_size = args.hidden_size
     multipro_vec_size = multipro_embs.dim
     num_classes = feature_norms.length
+    num_bags = multipro_embs.num_prototypes
+    dropout = args.dropout
 
-    ffnn = FFNN(multipro_vec_size, hidden_size, num_classes)
+    ffnn = FFNN(multipro_vec_size, hidden_size, num_classes, num_bags, dropout)
 
     #train_xs = [sentence_vector(ex.words, self.word_vectors) for ex in train_exs]
     #train_ys = [ex.label for ex in train_exs]
@@ -264,11 +414,29 @@ def train_regressor(train_exs: List[str], dev_exs: List[str], multipro_embs: Mul
             #y_onehot.scatter_(0, torch.from_numpy(np.asarray(y,dtype=np.int64)), 1)
             # Zero out the gradients from the FFNN object. *THIS IS VERY IMPORTANT TO DO BEFORE CALLING BACKWARD()*
             ffnn.zero_grad()
-            log_probs = ffnn.forward(x)
 
-            # Can also use built-in NLLLoss as a shortcut here but we're being explicit here
-            #loss = torch.neg(log_probs).dot(y)
-            loss = mse(log_probs.unsqueeze(0), y.unsqueeze(0)).sum() # add dummy batch dimension
+            # x is a tensor [1 , k, N] where k is the number of clusters. one embedding for each cluster. we want to 
+            #print(x.size())
+            #print(x[:,:10])
+
+            #bag_losses = torch.empty(num_bags)
+            # for i in range(0,multipro_embs.num_prototypes):
+            #     instance = x[i,:]
+            #     #print(instance.size())
+            #     #print(instance[:10])
+
+            #     log_probs = ffnn.forward(instance)
+            #     instance_loss = mse(log_probs.unsqueeze(0), y.unsqueeze(0)).sum() # add dummy batch dimension
+            #     bag_losses[i] = instance_loss
+            #print(bag_losses)
+            #loss = torch.min(bag_losses)
+
+            log_probs = ffnn.forward(x)
+            loss = mse(log_probs.unsqueeze(0), y.unsqueeze(0)).sum()
+
+            #print(loss)
+            #raise Exception("help multi")
+
             #print(loss)
             #print(loss.shape)
             total_loss += loss
@@ -287,6 +455,15 @@ def train_regressor(train_exs: List[str], dev_exs: List[str], multipro_embs: Mul
 
 
     return model
+
+
+# def train_glove_regressor(train_exs: List[str], dev_exs: List[str], feature_norms: FeatureNorms, args) -> FeatureClassifier:
+
+
+
+#     # not actually multiprototype embeddings but that's the form we need it in
+#     model = train_regressor(train_exs, dev_exs, multipro_embs, feature_norms, args)
+#     return model
 
 
 def train_binary_classifier(train_exs: List[str], dev_exs: List[str], multipro_embs: MultiProtoTypeEmbeddings, feature_norms: FeatureNorms, args) -> BinaryClassifier:
@@ -344,6 +521,7 @@ def train_binary_classifier(train_exs: List[str], dev_exs: List[str], multipro_e
         evaluate_binary(model, dev_exs, feature_norms, args, debug='info')
 
 
+
     return model
 
 def evaluate(model, dev_exs, feature_norms, args, debug='false'):
@@ -352,11 +530,14 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
     cosines = []
     top_10_precs = []
     top_20_precs = []
+    top_k_precs = []
     correlations = []
 
     num_top_10 = 0
     num_top_20 = 0
     num_total = 0
+
+    model.nn.eval()
 
     for i in range(0,len(dev_exs)):
         num_total +=1
@@ -366,8 +547,11 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
         y_hat.append(prediction)
 
         gold = feature_norms.get_feature_vector(word)
+        gold_feats = feature_norms.get_features(word)
         y.append(gold)
 
+        #print(prediction)
+        #print(gold)
         cos = cosine(prediction, gold)
         cosines.append(cos)
 
@@ -386,6 +570,12 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
         prec = num_in_top_20 / len(top_20_gold)
         top_20_precs.append(prec)
 
+        gold_len = len(gold_feats)
+        top_k = model.predict_top_n_features(word, gold_len)
+        num_in_top_k = len(set(top_k).intersection(set(gold_feats)))
+        top_k_prec = num_in_top_k / gold_len
+        top_k_precs.append(top_k_prec)
+
         corr, p = spearmanr(prediction, gold)
         correlations.append(corr)
 
@@ -393,13 +583,18 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
             print(word)
             print(top_10)
             print(top_10_gold)
+            print(gold_feats)
+            print(top_k)
+
             print("cosine: %f" % cos)
             print("precison: %f" % prec)
             print("correlation: %f" % corr)
+            print("top k acc: %f" % top_k_prec)
 
 
     top_10_prec = np.average(top_10_precs)
     top_20_prec = np.average(top_20_precs)
+    top_k_prec = np.average(top_k_precs)
 
     #print(len(y))
     #print(len(y_hat))
@@ -407,6 +602,7 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
     print("Average cosine between gold and predicted feature norms: %s" % np.average(cosines))
     print("average Percentage (%) of gold gold-standard features retrieved in the top 10 features of the predicted vector: ", top_10_prec)
     print("average Percentage (%) of gold gold-standard features retrieved in the top 20 features of the predicted vector: ", top_20_prec)
+    print("Average % @k (derby metric)", top_k_prec)
     #print("Percentage (%) of test items that retrieve their gold-standard vector in the top 10 neighbours of their predicted vector: %f" % top_20_acc)
     print("correlation between gold and predicted vectors: %s " % np.average(correlations))
 

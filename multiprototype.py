@@ -20,6 +20,7 @@ class MultiProtoTypeEmbeddings:
         self.vectors = vectors
         self.dim = vectors[0].shape[1]
         self.vocab_size = len(word_indexer)
+        self.num_prototypes = len(vectors[0])
 
     def get_embedding_length(self):
         return len(self.vectors[0])
