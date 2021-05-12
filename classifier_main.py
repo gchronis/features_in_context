@@ -8,6 +8,7 @@ from utils import *
 from typing import List
 import time
 from torch.utils.data import random_split
+import torch
 
 
 def _parse_args():
@@ -29,6 +30,9 @@ def _parse_args():
     parser.add_argument('--model', type=str, default='regression', help='regression binary frequency modads')
     parser.add_argument('--layer', type=int, default=8, help='layer of BERT embeddings to use')
     parser.add_argument('--clusters', type=int, default=1, help='number of lexical prototypes in each BERT multi-prototype embedding')
+    parser.add_argument('--save_path', type=str, default=None, help='path for saving model')
+    parser.add_argument('--embedding_type', type=str, default='bert', help='glove word2vec bert')
+
 
     add_models_args(parser) # defined in models.py
 
@@ -132,11 +136,28 @@ if __name__ == '__main__':
 
     # Load the training and test data
     feature_norms = read_feature_norms('data/buchanan/cue_feature_words.csv')
-    embedding_file = './data/multipro_embeddings/layer'+ str(args.layer) + 'clusters' + str(args.clusters) + '.txt'
-    multipro_embs = read_multiprototype_embeddings(embedding_file, layer=args.layer, num_clusters=args.clusters)
+
+    if args.embedding_type == 'bert':
+        embedding_file = './data/multipro_embeddings/layer'+ str(args.layer) + 'clusters' + str(args.clusters) + '.txt'
+        embs = read_multiprototype_embeddings(embedding_file, layer=args.layer, num_clusters=args.clusters)
+    elif args.embedding_type == 'glove':
+        embeddings_list = []
+        word_indexer = Indexer()
+        with open("data/glove.6B/glove.6B.300d.txt", 'r') as f:
+            for line in f:
+                values = line.split()
+                word = values[0]
+                vector = np.asarray(values[1:], "float32")
+                embeddings_list.append([vector])
+
+                #print(embeddings_dict)
+                #raise Exception("hfelfnl")
+                word_indexer.add_and_get_index(word)
+
+        embs = MultiProtoTypeEmbeddings(word_indexer, np.array(embeddings_list), 0, 1) # dummy layer, clusters = 1
 
 
-    train_words, dev_words, test_words = prepare_data(feature_norms, multipro_embs)
+    train_words, dev_words, test_words = prepare_data(feature_norms, embs)
     print("%i train exs, %i dev exs, %i train exs" % (len(train_words), len(dev_words), len(test_words)))
 
     #if args.print_dataset:
@@ -149,9 +170,9 @@ if __name__ == '__main__':
     if args.do_dumb_thing:
         decoder = DumbClassifier(train_data_indexed)
     elif args.model == 'binary':
-        model = train_binary_classifier(train_words, dev_words, multipro_embs, feature_norms, args)
+        model = train_binary_classifier(train_words, dev_words, embs, feature_norms, args)
     elif args.model == 'regression':
-        model = train_regressor(train_words, dev_words, multipro_embs, feature_norms, args)
+        model = train_regressor(train_words, dev_words, embs, feature_norms, args)
     end = time.time()
 
     print("Time elapsed during training: %s seconds" % (end - start))
@@ -164,4 +185,6 @@ if __name__ == '__main__':
     evaluate(model, test_words, feature_norms, args, debug='false')
     #evaluate(test_data_indexed, decoder, print_output=False, outfile=None, use_java=args.perform_java_eval)
 
-
+    if args.save_path is not None:
+        torch.save(model, args.save_path)
+        print("Wrote trained model to ", args.save_path)
