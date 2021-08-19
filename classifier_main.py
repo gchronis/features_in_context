@@ -2,6 +2,7 @@ import argparse
 import random
 import numpy as np
 from models import *
+from label_propagation import *
 from feature_data import *
 from multiprototype import *
 from utils import *
@@ -21,13 +22,14 @@ def _parse_args():
     
     # General system running and configuration options
     parser.add_argument('--do_dumb_thing', dest='do_dumb_thing', default=False, action='store_true', help='run the nearest neighbor model')
-    parser.add_argument('--train_path', type=str, default='data/geo_train.tsv', help='path to train data')
-    parser.add_argument('--dev_path', type=str, default='data/geo_dev.tsv', help='path to dev data')
-    parser.add_argument('--test_path', type=str, default='data/geo_test.tsv', help='path to blind test data')
-    parser.add_argument('--test_output_path', type=str, default='geo_test_output.tsv', help='path to write blind test results')
-    parser.add_argument('--domain', type=str, default='geo', help='domain (geo for geoquery)')
+    #parser.add_argument('--train_path', type=str, default='data/geo_train.tsv', help='path to train data')
+    #parser.add_argument('--dev_path', type=str, default='data/geo_dev.tsv', help='path to dev data')
+    #parser.add_argument('--test_path', type=str, default='data/geo_test.tsv', help='path to blind test data')
+    #parser.add_argument('--test_output_path', type=str, default='geo_test_output.tsv', help='path to write blind test results')
+    #parser.add_argument('--domain', type=str, default='geo', help='domain (geo for geoquery)')
+    parser.add_argument('--train_data', type=str, default='all', help='mc_rae all mc_rae_animals')
     parser.add_argument('--print_dataset', dest='print_dataset', default=False, action='store_true', help="Print some sample data on loading")
-    parser.add_argument('--model', type=str, default='regression', help='regression binary frequency modads')
+    parser.add_argument('--model', type=str, default='regression', help='regression binary frequency modabs label_propagation')
     parser.add_argument('--layer', type=int, default=8, help='layer of BERT embeddings to use')
     parser.add_argument('--clusters', type=int, default=1, help='number of lexical prototypes in each BERT multi-prototype embedding')
     parser.add_argument('--save_path', type=str, default=None, help='path for saving model')
@@ -135,7 +137,19 @@ if __name__ == '__main__':
     np.random.seed(args.seed)
 
     # Load the training and test data
-    feature_norms = read_feature_norms('data/buchanan/cue_feature_words.csv')
+
+    print(args.train_data)
+
+    if args.train_data == 'mc_rae_real':
+        print("gets here")
+        feature_norms = McRaeFeatureNorms('data/mcrae/CONCS_FEATS_concstats_brm/concepts_features-Table1.csv')
+    elif args.train_data == 'mc_rae_subset':
+        feature_norms = BuchananFeatureNorms('data/buchanan/cue_feature_words.csv', subset='mc_rae_subset')
+    elif args.train_data == 'all':
+        feature_norms = BuchananFeatureNorms('data/buchanan/cue_feature_words.csv')
+    else:
+        raise Exception("dataset not implemented")
+
 
     if args.embedding_type == 'bert':
         embedding_file = './data/multipro_embeddings/layer'+ str(args.layer) + 'clusters' + str(args.clusters) + '.txt'
@@ -171,8 +185,10 @@ if __name__ == '__main__':
         decoder = DumbClassifier(train_data_indexed)
     elif args.model == 'binary':
         model = train_binary_classifier(train_words, dev_words, embs, feature_norms, args)
-    elif args.model == 'regression':
-        model = train_regressor(train_words, dev_words, embs, feature_norms, args)
+    elif args.model == 'ffnn':
+        model = train_ffnn(train_words, dev_words, embs, feature_norms, args)
+    elif args.model == 'label_propagation':
+        model = train_label_propagation(train_words, dev_words, embs, feature_norms, args)
     end = time.time()
 
     print("Time elapsed during training: %s seconds" % (end - start))
