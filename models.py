@@ -288,27 +288,39 @@ class FFNN(nn.Module):
         :param out: size of output (integer), which should be the number of classes
         """
         print("Initializing FFNN with input size %s, hidden size %s, output size %s" % (inp, hid, out))
+        self.num_classes = out
+
         super(FFNN, self).__init__()
         self.V = nn.Linear(inp, hid)
         self.g = nn.Tanh()
         #self.g = nn.ReLU()
         self.W = nn.Linear(hid, out)
-        #self.log_softmax = nn.LogSoftmax(dim=0)
-        # TODO self.sigmoid = 
         # Initialize weights according to a formula due to Xavier Glorot.
         #nn.init.xavier_uniform_(self.V.weight)
         #nn.init.xavier_uniform_(self.W.weight)
+        self.dropout = nn.Dropout(p=dropout)
 
-        self.dropout = nn.Dropout(p=0.5)
-
-        self.num_classes = out
         # Initialize with zeros instead
         nn.init.zeros_(self.V.weight)
         nn.init.zeros_(self.W.weight)
 
 
         #self.attn = Attention('dot', hid)
+        
         self.attn = AttentionSoftMax(inp , out_features = None)
+        #self.attn = Attention('general', inp)
+
+
+        self.layers = nn.Sequential(
+          nn.Linear(inp, hid),
+          nn.ReLU(),
+          nn.Linear(hid, hid),
+          nn.ReLU(),
+          nn.Linear(hid, hid),
+          nn.ReLU(),
+          nn.Dropout(p=dropout),
+          nn.Linear(hid, out)
+        )
 
 
         # self.attention = nn.Sequential(
@@ -342,7 +354,10 @@ class FFNN(nn.Module):
         #A = F.softmax(A, dim=1)  # softmax over N
 
         #M = torch.mm(A, x)  # KxL
+
+        # comment out in favor of our 4 layer MLP
         return self.dropout(self.W(self.g(self.V(weighted_avg))))
+        #return self.layers(weighted_avg)
 
 def dot_score(self, hidden, encoder_output):
     #energy = self.attn(encoder_output)
@@ -379,7 +394,7 @@ def form_output(word: str, norms: FeatureNorms, binary=False):
 
     return norm
 
-def train_regressor(train_exs: List[str], dev_exs: List[str], multipro_embs: MultiProtoTypeEmbeddings, feature_norms: FeatureNorms, args) -> FeatureClassifier:
+def train_ffnn(train_exs: List[str], dev_exs: List[str], multipro_embs: MultiProtoTypeEmbeddings, feature_norms: FeatureNorms, args) -> FeatureClassifier:
     num_epochs = args.epochs
     batch_size = args.batch_size
     initial_learning_rate = args.lr
