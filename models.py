@@ -22,16 +22,23 @@ def add_models_args(parser):
     """
     # Some common arguments for your convenience
     parser.add_argument('--seed', type=int, default=0, help='RNG seed (default = 0)')
-    parser.add_argument('--epochs', type=int, default=10, help='num epochs to train for')
-    parser.add_argument('--lr', type=float, default=0.0001)
+    parser.add_argument('--epochs', type=int, default=None, help='num epochs to train for')
+    parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--batch_size', type=int, default=1, help='batch size')
-    parser.add_argument('--hidden_size', type=int, default=300, help='size of hidden state')
+    parser.add_argument('--hidden_size', type=int, default=None, help='size of hidden state')
+    parser.add_argument('--dropout', type=float, default=None, help='dropout probability')
 
     # Feel free to add other hyperparameters for your input dimension, etc. to control your network
     # 50-200 might be a good range to start with for embedding and LSTM sizes
     #parser.add_argument('--embedding_size', type=int, default=50, help='size of embedding to train')
     #parser.add_argument('--pretrained', type=bool, default=True, help='Boolean indicating whether to start with pretrained vectors')
-    parser.add_argument('--dropout', type=float, default=0.5, help='dropout probability')
+
+    """
+    PLSR args
+    """
+
+    parser.add_argument('--plsr_n_components', type=int, default=None, help='number of dimensionality reduction components to keep')
+    parser.add_argument('--plsr_max_iter', type=int, default=None, help='The maximum number of iterations of the power method when algorithm=nipals. Ignored otherwise.')
 
 
 # class DumbClassifier(object):
@@ -106,8 +113,12 @@ class FeatureClassifier(object):
         #raise Exception("STOP thief!")
         return logits
 
-    def predict_top_n_features(self, word: str, n: int):
-        logits = self.predict(word)
+    def predict_top_n_features(self, word: str, n: int, vec=None):
+
+        if vec is not None:
+            logits = vec
+        else:
+            logits = self.predict(word)
         #logits = logits.detach().numpy()
     
         # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
@@ -140,8 +151,12 @@ class FeatureClassifier(object):
         return logits
 
     def predict_top_n_features_in_context(self, word, sentence, n, bert=None):
-        logits = self.predict_in_context(word, sentence, bert)
-        #logits = logits.detach().numpy()
+
+        if vec is not None:
+            logits = vec
+        else:
+            logits = self.predict_in_context(word, sentence, bert)
+            #logits = logits.detach().numpy()
     
         # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
         # Newer NumPy versions (1.8 and up) have a function called argpartition for this. To get the indices of the four largest elements, do
@@ -462,11 +477,11 @@ def train_ffnn(train_exs: List[str], dev_exs: List[str], multipro_embs: MultiPro
         print("\nTotal loss on epoch %s: %f" % (epoch, total_loss))
         
         model = FeatureClassifier(ffnn, multipro_embs, feature_norms)
-
+        model.nn.eval()
         print("=======TRAIN SET=======")
         evaluate(model, train_exs, feature_norms, args, debug='false')
         print("=======DEV SET=======")
-        evaluate(model, dev_exs, feature_norms, args, debug='info')
+        evaluate(model, dev_exs, feature_norms, args, debug='false')
 
 
     return model
@@ -529,7 +544,7 @@ def train_binary_classifier(train_exs: List[str], dev_exs: List[str], multipro_e
         print("\nTotal loss on epoch %s: %f" % (epoch, total_loss))
         
         model = BinaryClassifier(ffnn, multipro_embs, feature_norms)
-
+        model.ffnn.eval()
         print("=======TRAIN SET=======")
         evaluate_binary(model, train_exs, feature_norms, args, debug='false')
         print("=======DEV SET=======")
@@ -552,7 +567,8 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
     num_top_20 = 0
     num_total = 0
 
-    model.nn.eval()
+    # we're calling this in the particular model trainer now bc this is now a more general function for more than ffnns
+    #model.nn.eval()
 
     for i in range(0,len(dev_exs)):
         num_total +=1
@@ -561,24 +577,28 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
         prediction = model.predict(word)
         y_hat.append(prediction)
 
+        #### truncated feature vec for debugging purposes!!!!!
+        #gold = feature_norms.get_feature_vector(word)[:10]
         gold = feature_norms.get_feature_vector(word)
+        #### truncated feature vec for debugging purposes!!!!!
+        #gold_feats = feature_norms.get_features(word)[:10]
         gold_feats = feature_norms.get_features(word)
         y.append(gold)
 
         #print(prediction)
         #print(gold)
-        cos = cosine(prediction, gold)
+        cos = 1 - cosine(prediction, gold)
         cosines.append(cos)
 
 
-        top_10 = model.predict_top_n_features(word, 10)
+        top_10 = model.predict_top_n_features(word, 10, vec=prediction)
         top_10_gold = feature_norms.top_n(word, 10)
 
         num_in_top_10 = len(set(top_10).intersection(set(top_10_gold)))
         prec = num_in_top_10 / len(top_10_gold)
         top_10_precs.append(prec)
 
-        top_20 = model.predict_top_n_features(word, 20)
+        top_20 = model.predict_top_n_features(word, 20, vec=prediction)
         top_20_gold = feature_norms.top_n(word, 20)
 
         num_in_top_20 = len(set(top_20).intersection(set(top_20_gold)))
@@ -586,7 +606,7 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
         top_20_precs.append(prec)
 
         gold_len = len(gold_feats)
-        top_k = model.predict_top_n_features(word, gold_len)
+        top_k = model.predict_top_n_features(word, gold_len, vec=prediction)
         num_in_top_k = len(set(top_k).intersection(set(gold_feats)))
         top_k_prec = num_in_top_k / gold_len
         top_k_precs.append(top_k_prec)
@@ -594,7 +614,7 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
         corr, p = spearmanr(prediction, gold)
         correlations.append(corr)
 
-        if (i % 30 ==0) and debug=='info':
+        if (i % 2 ==0) and debug=='info':
             print(word)
             print(top_10)
             print(top_10_gold)
@@ -610,18 +630,22 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
     top_10_prec = np.average(top_10_precs)
     top_20_prec = np.average(top_20_precs)
     top_k_prec = np.average(top_k_precs)
+    average_correlation = np.average(correlations)
+    average_cosine = np.average(cosines)
 
     #print(len(y))
     #print(len(y_hat))
 
-    print("Average cosine between gold and predicted feature norms: %s" % np.average(cosines))
+    print("Average cosine between gold and predicted feature norms: %s" % average_cosine)
     print("average Percentage (%) of gold gold-standard features retrieved in the top 10 features of the predicted vector: ", top_10_prec)
     print("average Percentage (%) of gold gold-standard features retrieved in the top 20 features of the predicted vector: ", top_20_prec)
     print("Average % @k (derby metric)", top_k_prec)
     #print("Percentage (%) of test items that retrieve their gold-standard vector in the top 10 neighbours of their predicted vector: %f" % top_20_acc)
-    print("correlation between gold and predicted vectors: %s " % np.average(correlations))
+    print("correlation between gold and predicted vectors: %s " % average_correlation)
 
     #raise Exception("what are we doingggg")
+
+    return (top_10_prec, top_20_prec, top_k_prec, average_correlation, average_cosine)
 
 def evaluate_binary(model, dev_exs, feature_norms, args, debug='false'):
 
@@ -642,7 +666,7 @@ def evaluate_binary(model, dev_exs, feature_norms, args, debug='false'):
         y.append(gold)
 
 
-        cos = cosine(prediction, gold)
+        cos = 1- cosine(prediction, gold)
         cosines.append(cos)
 
         corr, p = spearmanr(prediction, gold)
@@ -657,43 +681,43 @@ def evaluate_binary(model, dev_exs, feature_norms, args, debug='false'):
             print("correlation: %f" % corr)
 
 
-def print_evaluation(golds: List[int], predictions: List[int]):
-    """
-    Prints evaluation statistics comparing golds and predictions, each of which is a sequence of 0/1 labels.
-    Prints accuracy as well as precision/recall/F1 of the positive class, which can sometimes be informative if either
-    the golds or predictions are highly biased.
+# def print_evaluation(golds: List[int], predictions: List[int]):
+#     """
+#     Prints evaluation statistics comparing golds and predictions, each of which is a sequence of 0/1 labels.
+#     Prints accuracy as well as precision/recall/F1 of the positive class, which can sometimes be informative if either
+#     the golds or predictions are highly biased.
 
-    :param golds: gold labels
-    :param predictions: pred labels
-    :return:
-    """
-    num_correct = 0
-    num_pos_correct = 0
-    num_pred = 0
-    num_gold = 0
-    num_total = 0
-    if len(golds) != len(predictions):
-        raise Exception("Mismatched gold/pred lengths: %i / %i" % (len(golds), len(predictions)))
-    for idx in range(0, len(golds)):
-        gold = golds[idx]
-        prediction = predictions[idx]
-        if prediction == gold:
-            num_correct += 1
-        if prediction == 1:
-            num_pred += 1
-        if gold == 1:
-            num_gold += 1
-        if prediction == 1 and gold == 1:
-            num_pos_correct += 1
-        num_total += 1
-    acc = float(num_correct) / num_total
-    output_str = "Accuracy: %i / %i = %f" % (num_correct, num_total, acc)
-    prec = float(num_pos_correct) / num_pred if num_pred > 0 else 0.0
-    rec = float(num_pos_correct) / num_gold if num_gold > 0 else 0.0
-    f1 = 2 * prec * rec / (prec + rec) if prec > 0 and rec > 0 else 0.0
-    output_str += ";\nPrecision (fraction of predicted positives that are correct): %i / %i = %f" % (num_pos_correct, num_pred, prec)
-    output_str += ";\nRecall (fraction of true positives predicted correctly): %i / %i = %f" % (num_pos_correct, num_gold, rec)
-    output_str += ";\nF1 (harmonic mean of precision and recall): %f;\n" % f1
-    print(output_str)
-    return acc, f1, output_str
+#     :param golds: gold labels
+#     :param predictions: pred labels
+#     :return:
+#     """
+#     num_correct = 0
+#     num_pos_correct = 0
+#     num_pred = 0
+#     num_gold = 0
+#     num_total = 0
+#     if len(golds) != len(predictions):
+#         raise Exception("Mismatched gold/pred lengths: %i / %i" % (len(golds), len(predictions)))
+#     for idx in range(0, len(golds)):
+#         gold = golds[idx]
+#         prediction = predictions[idx]
+#         if prediction == gold:
+#             num_correct += 1
+#         if prediction == 1:
+#             num_pred += 1
+#         if gold == 1:
+#             num_gold += 1
+#         if prediction == 1 and gold == 1:
+#             num_pos_correct += 1
+#         num_total += 1
+#     acc = float(num_correct) / num_total
+#     output_str = "Accuracy: %i / %i = %f" % (num_correct, num_total, acc)
+#     prec = float(num_pos_correct) / num_pred if num_pred > 0 else 0.0
+#     rec = float(num_pos_correct) / num_gold if num_gold > 0 else 0.0
+#     f1 = 2 * prec * rec / (prec + rec) if prec > 0 and rec > 0 else 0.0
+#     output_str += ";\nPrecision (fraction of predicted positives that are correct): %i / %i = %f" % (num_pos_correct, num_pred, prec)
+#     output_str += ";\nRecall (fraction of true positives predicted correctly): %i / %i = %f" % (num_pos_correct, num_gold, rec)
+#     output_str += ";\nF1 (harmonic mean of precision and recall): %f;\n" % f1
+#     print(output_str)
+#     return acc, f1, output_str
 
