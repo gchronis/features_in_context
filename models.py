@@ -150,7 +150,7 @@ class FeatureClassifier(object):
 
         return logits
 
-    def predict_top_n_features_in_context(self, word, sentence, n, bert=None):
+    def predict_top_n_features_in_context(self, word, sentence, n, bert=None, vec=None):
 
         if vec is not None:
             logits = vec
@@ -614,7 +614,7 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
         corr, p = spearmanr(prediction, gold)
         correlations.append(corr)
 
-        if (i % 2 ==0) and debug=='info':
+        if (i % 20 ==0) and debug=='info':
             print(word)
             print(top_10)
             print(top_10_gold)

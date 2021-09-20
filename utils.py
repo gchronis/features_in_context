@@ -1,5 +1,6 @@
 # utils.py
 import numpy as np
+from itertools import zip_longest
 
 def sigmoid(z):
     # if z is too negative, the exp overflows, so return zero.
@@ -68,3 +69,19 @@ class Indexer(object):
             self.objs_to_ints[object] = new_idx
             self.ints_to_objs[new_idx] = object
         return self.objs_to_ints[object]
+
+
+def grouper(n, iterable, padvalue=None):
+    """
+    grouper(3, 'abcdefg', 'x') --> ('a','b','c'), ('d','e','f'), ('g','x','x')"
+    """
+    return zip_longest(*[iter(iterable)]*n, fillvalue=padvalue)
+
+def cosine_similarity_matrix(A,B):
+    """
+    expects two numpy arrays. returns the cosine similarity matrix
+    """
+    num=np.dot(A,B.T)
+    p1=np.sqrt(np.sum(A**2,axis=1))[:,np.newaxis]
+    p2=np.sqrt(np.sum(B**2,axis=1))[np.newaxis,:]
+    return num/(p1*p2)

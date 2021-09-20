@@ -9,6 +9,7 @@ import csv
 import pickle
 from sklearn.cluster import KMeans
 from scipy.spatial.distance import cosine
+import math
 
 class MultiProtoTypeEmbeddings:
     """
@@ -36,6 +37,41 @@ class MultiProtoTypeEmbeddings:
             return self.vectors[word_idx]
         else:
             return self.vectors[self.word_indexer.index_of("UNK")]
+
+    def get_embeddinge_at_absolute_index(self, index):
+        None
+
+
+    def find_nearest_neighbor(self, query_vector):
+        # we have to find 
+        query_vec = np.array(query_vector)
+        #print(self.vectors.shape)
+
+        num_tokens = self.vectors.shape[0]
+        num_prototypes = self.num_prototypes
+        num_dims = self.dim
+
+        sqz = self.vectors.reshape((num_tokens * num_prototypes, num_dims))
+        #print(sqz.shape)
+        #print(query_vec.shape)
+        sims = cosine_similarity_matrix(sqz, query_vec)
+
+        #print(sims.shape)
+        # TODO this might return a tie.... what then?
+        max_value = max(sims)
+        #print(max_value)
+
+        neighbor_index = np.where(sims == max_value)
+        neighbor_index = neighbor_index[0][0]
+        #print(neighbor_index)
+        type_index = int(neighbor_index / self.num_prototypes)
+        prototype_index = int(math.remainder(neighbor_index, self.num_prototypes))
+        #print(type_index)
+        #print(prototype_index)
+        neighbor_vec = self.vectors[type_index][prototype_index]
+        neighbor_label = self.word_indexer.get_object(type_index) + '_' +str(prototype_index)
+        #print(neighbor_label)
+        return neighbor_label, neighbor_vec
 
 def grouper(iterable, n, fillvalue=None):
     args = [iter(iterable)] * n
