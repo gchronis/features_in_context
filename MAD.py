@@ -76,7 +76,7 @@ class MAD:
                 alphas = [1 for _ in range(0, num_drops)]
             else:
                 alphas = None
-                print "Illegal alpha_type given"
+                print("Illegal alpha_type given")
                 exit(1)
             sum_alphas = sum(alphas)
             alphas = [x/float(sum_alphas) for x in alphas]
@@ -146,7 +146,7 @@ class MAD:
         diff = np.linalg.norm(old_Y-new_Y)
         changes = []
         while (diff > self.tol):
-            print "inner step", step, np.linalg.norm(old_Y-new_Y), strftime("%Y-%m-%d %H:%M:%S")
+            print("inner step", step, np.linalg.norm(old_Y-new_Y), strftime("%Y-%m-%d %H:%M:%S"))
 
             old_Y = np.copy(new_Y)
             old_Y = old_Y.astype(np.float32)
@@ -167,9 +167,77 @@ class MAD:
 
     def test(self):
         a = np.random.random((4,4))
-        print a
-        print self._k_NN(a, 2)
+        print(a)
+        print(self._k_NN(a, 2))
         exit()
+
+def train_mad(train_exs: List[str], dev_exs: List[str], multipro_embs: MultiProtoTypeEmbeddings, feature_norms: FeatureNorms, args) -> KNNRegressor:
+
+    """
+    First prepare a dataset with our labeled examples
+    (all of the instances , labeled with the features)
+    """
+
+    # for each of the train examples, make an instance of all the prototypes and label them with the gold vector
+
+
+    #initialize empty np array to hold training data
+    # [number of vectors x size of vectors]
+    # we have k times the number of training words, because we have multi-prototype clusters
+    num_samples = len(train_exs) * multipro_embeddings.num_prototypes
+    X = np.empty([num_samples, multipro_embs.dim])
+    # initialize empty matrix to hold gold labels
+    # [number of vectors x size of feature norm fectors]
+    Y = np.empty([num_samples, feature_norms.length])
+
+    # iterate through the words
+    i=0
+    for word in train_exs:
+        # look up the embedding
+        emb = multipro_embs.get_embedding(word)
+        # look up the feature norm
+        norm = feature_norms.get_feature_vector(word)
+
+        # iterate through the prototypes for each word
+        #print(emb.shape)        
+        for index in range(0, emb.shape[0]):
+
+            # add vector to training xs
+            vector = emb[index, :]
+            #print(vector.shape)
+            X[i] = vector
+
+
+            # add feature norm to training ys
+            #print(norm.shape)
+            #print("first feature: ", norm[0])
+            Y[i] = vector
+
+    print("training length")
+    print(X.shape)
+    print(Y.shape)
+
+
+
+    model = MAD(beta=4, mu1=1, mu2=1, mu3=1, mu4=1, NNk=2)
+
+    #print(len(X))
+    #print(len(this_feature_for_all_words))
+
+    #predictions = medal.fit(similarity_matrix, properties, C)
+    predictions = medal.fit(X, Y, C)
+    
+    """
+    we also need i think our unlabeled examples?
+    """
+
+
+    #print("=======EVAL ON TRAIN SET=======")
+    #evaluate(model, train_exs, feature_norms, args, debug='false')
+    #print("=======EVAL ON DEV SET=======")
+    #evaluate(model, dev_exs, feature_norms, args, debug='info')
+
+    return model
 
 
 if __name__ == '__main__':
@@ -180,7 +248,12 @@ if __name__ == '__main__':
     load up multi-pro embeddings
     and caluclate similarity matrix
     """
+    layer = 0
+    clusters = 5
+    embedding_file = './data/multipro_embeddings/layer'+ str(layer) + 'clusters' + str(clusters) + '.txt'
+    embs = read_multiprototype_embeddings(embedding_file, layer=args.layer, num_clusters=args.clusters)
 
+    feature_norms = McRaeFeatureNorms('data/mcrae/CONCS_FEATS_concstats_brm/concepts_features-Table1.csv')
 
     """
     label each one with the properties for that lemma
@@ -210,4 +283,4 @@ if __name__ == '__main__':
 
 
     predictions = medal.fit(similarity_matrix, properties, C)
-    print predictions
+    print(predictions)
