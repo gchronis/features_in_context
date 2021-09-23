@@ -5,6 +5,7 @@ from models import *
 from label_propagation import *
 from plsr import *
 from knn import *
+from modabs import *
 from feature_data import *
 from multiprototype import *
 from utils import *
@@ -31,7 +32,7 @@ def _parse_args():
     #parser.add_argument('--domain', type=str, default='geo', help='domain (geo for geoquery)')
     parser.add_argument('--train_data', type=str, default='all', help='mc_rae_real mc_rae_subset buchanan (TODO mc_rae_animals) (TODO vinson_vigliocco)')
     parser.add_argument('--print_dataset', dest='print_dataset', default=False, action='store_true', help="Print some sample data on loading")
-    parser.add_argument('--model', type=str, default='ffnn', help='ffnn (binary) frequency (modabs) label_propagation knn plsr')
+    parser.add_argument('--model', type=str, default='ffnn', help='ffnn (binary) frequency modabs label_propagation knn plsr')
     parser.add_argument('--layer', type=int, default=8, help='layer of BERT embeddings to use')
     parser.add_argument('--clusters', type=int, default=1, help='number of lexical prototypes in each BERT multi-prototype embedding')
     parser.add_argument('--save_path', type=str, default=None, help='path for saving model')
@@ -39,6 +40,7 @@ def _parse_args():
 
     parser.add_argument('--kfold', dest='k_fold', type=int, default=False, help='train using k-fold cross validation')
     parser.add_argument('--dev_equals_train', dest='dev_equals_train', default=False, action='store_true', help='use the training words as dev set for debug')
+    parser.add_argument('--allbuthomonyms', dest='allbuthomonyms', default=False, action='store_true', help='train on all available words except for homonyms')
 
     add_models_args(parser) # defined in models.py
 
@@ -123,23 +125,56 @@ def predict_write_output_to_file(exs: List[FeatureNorm], classifier, outfile: st
         f.write("\n")
     f.close()
 
-def prepare_data(feature_norms: FeatureNorms, embeddings: MultiProtoTypeEmbeddings):
-    validation_split = .1
-    random_seed = 42
+def prepare_data(feature_norms: FeatureNorms, embeddings: MultiProtoTypeEmbeddings, allbuthomonyms=False):
     words = list(feature_norms.vocab.keys())
-
     #### DEBUG #####
     # toy training set
-    #words = words[:100]
+    # words = words[:100]
     ###############
 
-    dataset_size = len(words)
-    split = int(np.floor(validation_split * dataset_size))
-    #print(words)
-    val, test, train = random_split(words, [split, split, dataset_size - split * 2 ], generator=torch.Generator().manual_seed(random_seed))
-    #print(len(data))
+    if allbuthomonyms:
+        ambiguous_pairs = [
+                ('bat_animal', 'bat_baseball'),
+                ('board_wood', 'board_black'),
+                ('bow_ribbon', 'bow_weapon'),
+                ('cap_bottle', 'cap_hat'),
+                #('crane_machine', 'crane_animal')
+                ('hose', 'hose_leggings'),
+                ('mink', 'mink_coat'), # this one is not fully disambiguated
+                ('mouse', 'mouse_computer'),
+                ('pipe_smoking', 'pipe_plumbing'),
+                ('tank_army', 'tank_container')
+            ]
+
+        print("training on all words but evaluation homonyms")
+        eval_words = [item for t in ambiguous_pairs for item in t]
+
+        print("Starting with %s words" % len(words))
+        train = [i for i in words if i not in eval_words]
+        random.shuffle(train)
+        val = eval_words
+        test = eval_words
+
+        print("Ending up with %s training words" % len(train))
+
+
+    else:
+
+        validation_split = .1
+        random_seed = 42
+
+        dataset_size = len(words)
+        split = int(np.floor(validation_split * dataset_size))
+        #print(words)
+        val, test, train = random_split(words, [split, split, dataset_size - split * 2 ], generator=torch.Generator().manual_seed(random_seed))
+        print("Starting with %s training words" % len(train))
+
+        #print(len(data))
 
     return (train, val, test)
+
+
+
 
 def kfold_split(feature_norms: FeatureNorms, embeddings: MultiProtoTypeEmbeddings, k):
     random_seed = 42
@@ -210,12 +245,16 @@ if __name__ == '__main__':
 
 
     if not args.k_fold:
-        train_words, dev_words, test_words = prepare_data(feature_norms, embs)
+        train_words, dev_words, test_words = prepare_data(feature_norms, embs, allbuthomonyms=args.allbuthomonyms)
 
         """
         for debug we might want the dev set to be the trains et just to see if we're learning those
         """
         if args.dev_equals_train:
+
+            # DEBUG toy dataset
+            # train_words = train_words[:10]
+
             dev_words = train_words
 
         print("%i train exs, %i dev exs, %i test exs" % (len(train_words), len(dev_words), len(test_words)))
@@ -239,6 +278,8 @@ if __name__ == '__main__':
             model = train_knn_regressor(train_words, dev_words, embs, feature_norms, args)
         elif args.model == 'plsr':
             model = train_plsr(train_words, dev_words, embs, feature_norms, args)
+        elif args.model == 'modabs':
+            model = train_mad(train_words, dev_words, test_words, embs, feature_norms, args)
         else:
             raise Exception("model not implemented: ", args.model)
         end = time.time()
@@ -257,37 +298,45 @@ if __name__ == '__main__':
         """
         print("=======DEV SET=======")
         # return (top_10_prec, top_20_prec, top_k_prec, average_correlation, average_cosine)
-        MAP_at_10, MAP_at_20, MAP_at_k, correl, cos = evaluate(model, dev_words, feature_norms, args, debug='true')
+        MAP_at_10, MAP_at_20, MAP_at_k, correl, cos = evaluate(model, dev_words, feature_norms, args, debug='info')
         # create row of data for results
-        results = {
-            "train_dev_test": "dev",
-            "model": args.model,
-            "dataset": args.train_data,
-            "embedding_type": args.embedding_type,
-            "layer": args.layer,
-            "clusters": args.clusters,
-            "epochs": args.epochs,
-            "dropout": args.dropout,
-            "learning_rate": args.lr,
-            "hidden_size": args.hidden_size,
-            "plsr_n_components": args.plsr_n_components,
-            "plsr_max_iter": args.plsr_max_iter,
-            "save_path": args.save_path,
-            "MAP@10": MAP_at_10,
-            "MAP@20": MAP_at_20,
-            "MAP_at_k": MAP_at_k,
-            "average_correlation": correl,
-            "average_cosine": cos
-        }
 
-        # add row to CSV file
-        with open('results/plsr_tuning.csv', "a", newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=results.keys())
-            writer.writerow(results)
+
+        """
+        UNCOMMENT FOR hyperparameter tuning printouts
+        """
+        # results = {
+        #     "train_dev_test": "dev",
+        #     "model": args.model,
+        #     "dataset": args.train_data,
+        #     "embedding_type": args.embedding_type,
+        #     "layer": args.layer,
+        #     "clusters": args.clusters,
+        #     "epochs": args.epochs,
+        #     "dropout": args.dropout,
+        #     "learning_rate": args.lr,
+        #     "hidden_size": args.hidden_size,
+        #     "plsr_n_components": args.plsr_n_components,
+        #     "plsr_max_iter": args.plsr_max_iter,
+        #     "save_path": args.save_path,
+        #     "MAP@10": MAP_at_10,
+        #     "MAP@20": MAP_at_20,
+        #     "MAP_at_k": MAP_at_k,
+        #     "average_correlation": correl,
+        #     "average_cosine": cos
+        # }
+
+        # # add row to CSV file
+        # with open('results/plsr_tuning.csv', "a", newline='') as f:
+        #     writer = csv.DictWriter(f, fieldnames=results.keys())
+        #     writer.writerow(results)
+
+        ##################################################
+
 
         print("=======FINAL PRINTING ON TEST SET=======")
         # return (top_10_prec, top_20_prec, top_k_prec, average_correlation, average_cosine)
-        results = evaluate(model, test_words, feature_norms, args, debug='true')
+        results = evaluate(model, test_words, feature_norms, args, debug='false')
 
     elif args.k_fold:
         """
@@ -346,8 +395,8 @@ if __name__ == '__main__':
                 model = train_binary_classifier(train_words, dev_words, embs, feature_norms, args)
             elif args.model == 'ffnn':
                 model = train_ffnn(train_words, dev_words, embs, feature_norms, args)
-            elif args.model == 'label_propagation':
-                model = train_label_propagation(train_words, dev_words, embs, feature_norms, args)
+            #elif args.model == 'label_propagation':
+            #    model = train_label_propagation(train_words, dev_words, embs, feature_norms, args)
             end = time.time()
 
             print("Time elapsed during training: %s seconds" % (end - start))
@@ -383,5 +432,5 @@ if __name__ == '__main__':
         print(df)
 
     if args.save_path is not None:
-        #torch.save(model, args.save_path)
+        torch.save(model, args.save_path)
         print("Wrote trained model to ", args.save_path)
