@@ -41,6 +41,16 @@ def add_models_args(parser):
     parser.add_argument('--plsr_max_iter', type=int, default=None, help='The maximum number of iterations of the power method when algorithm=nipals. Ignored otherwise.')
 
 
+    """
+    ModAbs args
+    """
+    parser.add_argument('--mu1', type=float, default=None, help='mu_inj (Talukdar and Kramer 2009)')
+    parser.add_argument('--mu2', type=float, default=None, help='mu_cont (Talukdar and Kramer 2009)')
+    parser.add_argument('--mu3', type=float, default=None, help='mu_abdn (Talukdar and Kramer 2009)')
+    parser.add_argument('--mu4', type=float, default=None, help='ModAds NNk (Rosenfeld and Erk 2019)')
+    parser.add_argument('--nnk', type=float, default=None, help='ModAds equal/decay n (Rosenfeld and Erk 2019')
+
+
 # class DumbClassifier(object):
 #     """
 #     Person classifier that takes counts of how often a word was observed to be the positive and negative class
