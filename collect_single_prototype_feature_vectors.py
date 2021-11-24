@@ -5,7 +5,7 @@ from multiprototype import *
 
 
 # get words to collect single prototype vectors for
-exs = read_cue_feature_examples('data/buchanan/cue_feature_words.csv')
+exs = read_buchanan_cue_feature_examples('data/buchanan/cue_feature_words.csv')
 unique_words = unique_words(exs)
 unique_words = [unique_words.get_object(i) for i in range(0, len(unique_words))]
 
@@ -23,10 +23,10 @@ embeddings_dir = 'data/multipro_embeddings'
 #sort_bnc_tokens(outfile, embeddings_dir, unique_words)
 
 #initialize BERT model
-#bert_base = BERTBase()
+bert_base = BERTBase()
 
 
-layers = [8]
+layers = [11]
 cluster_sizes = [1,5]
 
 # Generate clusters
@@ -42,7 +42,7 @@ for layer in layers:
         embs = prepare_embeddings(embeddings_dir, output_dir, unique_words, layer, cluster_size)
 
 # read in the layer 8 5-prototype embeddings
-embs = read_multiprototype_embeddings('./data/multipro_embeddings/layer8clusters5.txt', layer=8, num_clusters=5)
+embs = read_multiprototype_embeddings('./data/multipro_embeddings/layer11clusters5.txt', layer=8, num_clusters=5)
 #print(embs)
 
 leaving = embs.get_embedding('leaving')
