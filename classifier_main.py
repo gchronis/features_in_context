@@ -336,6 +336,9 @@ if __name__ == '__main__':
 
         print("=======FINAL PRINTING ON TEST SET=======")
         # return (top_10_prec, top_20_prec, top_k_prec, average_correlation, average_cosine)
+        print("testing on these words:")
+        for test_word in test_words:
+            print(test_word)
         results = evaluate(model, test_words, feature_norms, args, debug='false')
 
     elif args.k_fold:
