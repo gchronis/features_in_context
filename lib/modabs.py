@@ -423,3 +423,4 @@ if __name__ == '__main__':
     predictions = medal.fit(similarity_matrix, properties, C)
     print("model predictions")
     print(predictions)
+    print("hello")
