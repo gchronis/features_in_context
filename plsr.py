@@ -78,21 +78,21 @@ class PLSRClassifier(FeatureClassifier):
 
         return logits
 
-    def predict_top_n_features_in_context(self, word, sentence, n, bert=None):
-        logits = self.predict_in_context(word, sentence, bert)
-        #logits = logits.detach().numpy()
+    # def predict_top_n_features_in_context(self, word, sentence, n, bert=None):
+    #     logits = self.predict_in_context(word, sentence, bert)
+    #     #logits = logits.detach().numpy()
     
-        # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
-        # Newer NumPy versions (1.8 and up) have a function called argpartition for this. To get the indices of the four largest elements, do
-        ind = np.argpartition(logits, -n)[-n:]
+    #     # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
+    #     # Newer NumPy versions (1.8 and up) have a function called argpartition for this. To get the indices of the four largest elements, do
+    #     ind = np.argpartition(logits, -n)[-n:]
 
-        feats = []
-        for i in ind:
-            feat = self.feature_norms.feature_map.get_object(i)
-            feats.append(feat)
+    #     feats = []
+    #     for i in ind:
+    #         feat = self.feature_norms.feature_map.get_object(i)
+    #         feats.append(feat)
 
-        #print(feats)
-        return feats   
+    #     #print(feats)
+    #     return feats   
 
         #print(feats)
 
