@@ -1,6 +1,9 @@
 # utils.py
 import numpy as np
 from itertools import zip_longest
+import re
+from nltk.corpus import wordnet as wn
+
 
 def sigmoid(z):
     # if z is too negative, the exp overflows, so return zero.
@@ -85,3 +88,25 @@ def cosine_similarity_matrix(A,B):
     p1=np.sqrt(np.sum(A**2,axis=1))[:,np.newaxis]
     p2=np.sqrt(np.sum(B**2,axis=1))[np.newaxis,:]
     return num/(p1*p2)
+
+
+
+def lemma_from_string(lemma_string):
+    # grabs everything in between (' ') in a string
+    # (needed to update from r"'(.*?)'" to deal with cases with quotes in word like o'clock)
+    string = re.findall(r"\('(.*?)'\)", lemma_string)[0]
+    #print(string)
+    lemma = wn.lemma(string)
+    return lemma
+
+def lemma_name_from_string(lemma_string):
+    # (needed to update from r"'(.*?)'" to deal with cases with quotes in word like o'clock)
+    string = re.findall(r"\('(.*?)'\)", lemma_string)[0]
+    #print(string)
+    return string
+
+def word_form_from_lemma_string(lemma_string)
+    # (needed to update from r"'(.*?)'" to deal with cases with quotes in word like o'clock)
+    string = re.findall(r"\('(.*?)'\)", lemma_string)[0]
+    #print(string)
+    return string
