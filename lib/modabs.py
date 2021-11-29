@@ -7,10 +7,10 @@ import numpy as np
 """
 added by gabriella
 """
-from multiprototype import *
-from feature_data import *
-from utils import cosine_similarity_matrix
-from models import FeatureClassifier
+from lib.multiprototype import *
+from lib.feature_data import *
+from lib.utils import cosine_similarity_matrix
+from lib.models import FeatureClassifier
 from scipy import spatial
 import math
 

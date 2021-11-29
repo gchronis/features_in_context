@@ -1,7 +1,7 @@
 from typing import List
-from multiprototype import *
-from feature_data import *
-from models import FeatureClassifier, evaluate, form_input
+from lib.multiprototype import *
+from lib.feature_data import *
+from lib.models import FeatureClassifier, evaluate, form_input
 from sklearn.cross_decomposition import PLSRegression
 
 
