@@ -1,14 +1,14 @@
 import argparse
 import random
 import numpy as np
-#from models import *
-#from label_propagation import *
-#from plsr import *
-#from knn import *
-#from modabs import *
-#from feature_data import *
-#from multiprototype import *
-#from utils import *
+from lib.models import *
+from lib.label_propagation import *
+from lib.plsr import *
+from lib.knn import *
+from lib.modabs import *
+from lib.feature_data import *
+from lib.multiprototype import *
+from lib.utils import *
 from typing import List
 import time
 from torch.utils.data import random_split
@@ -221,7 +221,7 @@ if __name__ == '__main__':
     elif args.train_data == 'buchanan':
         feature_norms = BuchananFeatureNorms('data/buchanan/cue_feature_words.csv')
     elif args.train_data == 'binder':
-        feature_norms = BuchananFeatureNorms('data/buchanan/cue_feature_words.csv')
+        feature_norms = BinderFeatureNorms('/Users/gabriellachronis/data/binder_word_ratings/WordSet1_Ratings.csv')
     else:
         raise Exception("dataset not implemented")
 
