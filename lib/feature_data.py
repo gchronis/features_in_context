@@ -7,6 +7,7 @@ import numpy as np
 from collections import Counter
 import csv
 import numpy as np
+import pandas as pd
 
 class FeatureNorms:
     """
@@ -78,6 +79,8 @@ class FeatureNorms:
         return feats
         #print(top_10)
 
+
+
 class BuchananFeatureNorms(FeatureNorms):
 
     def __init__(self, infile, subset=None, normalized=True):
@@ -142,6 +145,45 @@ class McRaeFeatureNorms(FeatureNorms):
         self.feature_norms = norms
         self.length = len(feature_map)
         self.vocab = words
+
+class BinderFeatureNorms(FeatureNorms):
+    def __init__(self, infile, subset=None):
+        super().__init__(None)
+
+        df = pd.read_csv('/Users/gabriellachronis/data/binder_word_ratings/WordSet1_Ratings.csv')
+        df = df.set_index("Word")
+        df = df.drop(columns = ["No", "N", "Mean R"])
+
+
+        feature_map = Indexer()
+        words = Counter()
+
+        norms = {}
+
+        for word, data in df.iterrows():
+            words[word] += 1
+
+
+            # go left to right through all columns, each of which is a different binder feature
+            for column in df.columns:
+                feature = column
+                value = data[column]
+
+                if (type(value) != float) and (type(value) != int):
+                    continue
+
+                feature_index = feature_map.add_and_get_index(feature)
+
+                if word in norms:
+                    norms[word][feature_index] = value
+                else:
+                    norms[word] = {feature_index: value}
+
+        self.feature_map = feature_map
+        self.feature_norms = norms
+        self.length = len(feature_map)
+        self.vocab = words
+
 
 class FeatureNorm:
     """
@@ -338,6 +380,7 @@ def read_mcrae_cue_feature_examples(infile: str, subset='all') -> List[McRaeCueF
     return exs
 
 
+
 def unique_words(exs):
     print("first ten cue_feature examples")
     [ print(ex) for ex in exs[:10] ]
@@ -376,8 +419,29 @@ if __name__=="__main__":
     # print(uw)
     # print("%s unique words in cue feature data" % len(uw))
 
-    exs = read_mcrae_cue_feature_examples('data/mcrae/CONCS_FEATS_concstats_brm/concepts_features-Table1.csv')
+    # exs = read_mcrae_cue_feature_examples('data/mcrae/CONCS_FEATS_concstats_brm/concepts_features-Table1.csv')
+    # uw = unique_words(exs)
+    # print(uw)
+    # print("%s unique words in cue feature data" % len(uw))
 
-    uw = unique_words(exs)
-    print(uw)
-    print("%s unique words in cue feature data" % len(uw))
+
+    # df = pd.read_csv('/Users/gabriellachronis/data/binder_word_ratings/WordSet1_Ratings.csv')
+
+    # print(df.head(5))
+
+    # df = df.set_index("Word")
+
+    # print(df.head(5))
+
+    # df = df.drop(columns = ["No", "N", "Mean R"])
+
+    # print(df.head(5))
+
+    norms = BinderFeatureNorms('/Users/gabriellachronis/data/binder_word_ratings/WordSet1_Ratings.csv')
+    print(norms.print_features('hand'))
+
+    #print(norms.feature_norms)
+
+    raise Exception("deklw")
+
+

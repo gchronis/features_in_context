@@ -30,7 +30,7 @@ def _parse_args():
     #parser.add_argument('--test_path', type=str, default='data/geo_test.tsv', help='path to blind test data')
     #parser.add_argument('--test_output_path', type=str, default='geo_test_output.tsv', help='path to write blind test results')
     #parser.add_argument('--domain', type=str, default='geo', help='domain (geo for geoquery)')
-    parser.add_argument('--train_data', type=str, default='all', help='mc_rae_real mc_rae_subset buchanan (TODO mc_rae_animals) (TODO vinson_vigliocco)')
+    parser.add_argument('--train_data', type=str, default='all', help='mc_rae_real mc_rae_subset buchanan binder (TODO mc_rae_animals) (TODO vinson_vigliocco)')
     parser.add_argument('--print_dataset', dest='print_dataset', default=False, action='store_true', help="Print some sample data on loading")
     parser.add_argument('--model', type=str, default='ffnn', help='ffnn (binary) frequency modabs label_propagation knn plsr')
     parser.add_argument('--layer', type=int, default=8, help='layer of BERT embeddings to use')
@@ -219,6 +219,8 @@ if __name__ == '__main__':
     elif args.train_data == 'mc_rae_subset':
         feature_norms = BuchananFeatureNorms('data/buchanan/cue_feature_words.csv', subset='mc_rae_subset')
     elif args.train_data == 'buchanan':
+        feature_norms = BuchananFeatureNorms('data/buchanan/cue_feature_words.csv')
+    elif args.train_data == 'binder':
         feature_norms = BuchananFeatureNorms('data/buchanan/cue_feature_words.csv')
     else:
         raise Exception("dataset not implemented")
