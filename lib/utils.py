@@ -105,7 +105,7 @@ def lemma_name_from_string(lemma_string):
     #print(string)
     return string
 
-def word_form_from_lemma_string(lemma_string)
+def word_form_from_lemma_string(lemma_string):
     # (needed to update from r"'(.*?)'" to deal with cases with quotes in word like o'clock)
     string = re.findall(r"\('(.*?)'\)", lemma_string)[0]
     #print(string)
