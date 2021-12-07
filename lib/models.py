@@ -626,10 +626,10 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
 
         if (i % 20 ==0) and debug=='info':
             print(word)
-            print(top_10)
-            print(top_10_gold)
-            print(gold_feats)
-            print(top_k)
+            print("top ten predicted features: ", top_10)
+            print("top ten gold features: ", top_10_gold)
+            print("gold features: ", gold_feats)
+            print("top k predicted features: ", top_k)
 
             print("cosine: %f" % cos)
             print("precison: %f" % prec)
