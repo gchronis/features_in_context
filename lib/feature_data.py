@@ -152,13 +152,15 @@ class BinderFeatureNorms(FeatureNorms):
 
         df = pd.read_csv('/Users/gabriellachronis/data/binder_word_ratings/WordSet1_Ratings.csv')
         df = df.set_index("Word")
-        df = df.drop(columns = ["No", "N", "Mean R"])
+        features_to_exclude = ['No', 'N', 'Mean R', 'WC', 'LEN', 'FREQ', 'L10 FREQ', 'Orth', 'Orth_F', 'N1_F', 'N2_F', 'N3_F', 'IMG', 'Unnamed: 70', 'Unnamed: 80' ]
+        df = df.drop(columns = features_to_exclude)
 
 
         feature_map = Indexer()
         words = Counter()
 
         norms = {}
+
 
         for word, data in df.iterrows():
             words[word] += 1
@@ -169,15 +171,17 @@ class BinderFeatureNorms(FeatureNorms):
                 feature = column
                 value = data[column]
 
+                # ignore nonnumeric features and other columns in binder file
                 if (type(value) != float) and (type(value) != int):
                     continue
-
-                feature_index = feature_map.add_and_get_index(feature)
-
-                if word in norms:
-                    norms[word][feature_index] = value
                 else:
-                    norms[word] = {feature_index: value}
+                    feature_index = feature_map.add_and_get_index(feature)
+
+                    # add it to the norms if we havent seen it before, otherwise add latest feature to existing norm
+                    if word in norms:
+                        norms[word][feature_index] = value
+                    else:
+                        norms[word] = {feature_index: value}
 
         self.feature_map = feature_map
         self.feature_norms = norms
