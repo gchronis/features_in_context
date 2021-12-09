@@ -627,7 +627,7 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
         corr, p = spearmanr(prediction, gold)
         correlations.append(corr)
 
-        if (i % 20 ==0) and debug=='info':
+        if ((i % 20 ==0) and debug=='info') or (debug=='true'):
             print(word)
             print("top ten predicted features: ", top_10)
             print("top ten gold features: ", top_10_gold)
