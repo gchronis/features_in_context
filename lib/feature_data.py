@@ -115,6 +115,18 @@ class BuchananFeatureNorms(FeatureNorms):
         self.feature_norms = norms
         self.length = len(feature_map)
         self.vocab = words
+        self.ambiguous_pairs = [
+                ('bat_animal', 'bat_baseball'),
+                ('board_wood', 'board_black'),
+                ('bow_ribbon', 'bow_weapon'),
+                ('cap_bottle', 'cap_hat'),
+                #('crane_machine', 'crane_animal')
+                ('hose', 'hose_leggings'),
+                ('mink', 'mink_coat'), # this one is not fully disambiguated
+                ('mouse', 'mouse_computer'),
+                ('pipe_smoking', 'pipe_plumbing'),
+                ('tank_army', 'tank_container')
+            ]
 
 class McRaeFeatureNorms(FeatureNorms):
 
@@ -145,6 +157,18 @@ class McRaeFeatureNorms(FeatureNorms):
         self.feature_norms = norms
         self.length = len(feature_map)
         self.vocab = words
+        self.ambiguous_pairs = [
+                ('bat_(animal)', 'bat_(baseball)'),
+                ('board_(wood)', 'board_(black)'),
+                ('bow_(ribbon)', 'bow_(weapon)'),
+                ('cap_(bottle)', 'cap_(hat)'),
+                #('crane_machine', 'crane_animal')
+                ('hose', 'hose_(leggings)'),
+                ('mink', 'mink_(coat)'), # this one is not fully disambiguated
+                ('mouse', 'mouse_(computer)'),
+                ('pipe_(smoking)', 'pipe_(plumbing)'),
+                ('tank_(army)', 'tank_(container)')
+            ]
 
 class BinderFeatureNorms(FeatureNorms):
     def __init__(self, infile, subset=None):
@@ -441,8 +465,15 @@ if __name__=="__main__":
 
     # print(df.head(5))
 
-    norms = BinderFeatureNorms('/Users/gabriellachronis/data/binder_word_ratings/WordSet1_Ratings.csv')
-    print(norms.print_features('hand'))
+    # norms = BinderFeatureNorms('/Users/gabriellachronis/data/binder_word_ratings/WordSet1_Ratings.csv')
+    # print(norms.print_features('hand'))
+
+    norms = McRaeFeatureNorms('data/mcrae/CONCS_FEATS_concstats_brm/concepts_features-Table1.csv')
+
+    print(norms.feature_norms.keys())
+
+    print(norms.feature_norms['bat_(animal)'])
+    print(norms.feature_norms['bat_animal'])
 
     #print(norms.feature_norms)
 

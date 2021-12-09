@@ -133,18 +133,7 @@ def prepare_data(feature_norms: FeatureNorms, embeddings: MultiProtoTypeEmbeddin
     ###############
 
     if allbuthomonyms:
-        ambiguous_pairs = [
-                ('bat_animal', 'bat_baseball'),
-                ('board_wood', 'board_black'),
-                ('bow_ribbon', 'bow_weapon'),
-                ('cap_bottle', 'cap_hat'),
-                #('crane_machine', 'crane_animal')
-                ('hose', 'hose_leggings'),
-                ('mink', 'mink_coat'), # this one is not fully disambiguated
-                ('mouse', 'mouse_computer'),
-                ('pipe_smoking', 'pipe_plumbing'),
-                ('tank_army', 'tank_container')
-            ]
+        ambiguous_pairs = feature_norms.ambiguous_pairs
 
         print("training on all words but evaluation homonyms")
         eval_words = [item for t in ambiguous_pairs for item in t]
@@ -341,7 +330,7 @@ if __name__ == '__main__':
         print("testing on these words:")
         for test_word in test_words:
             print(test_word)
-        results = evaluate(model, test_words, feature_norms, args, debug='false')
+        results = evaluate(model, test_words, feature_norms, args, debug='true')
 
     elif args.k_fold:
         """
@@ -418,7 +407,7 @@ if __name__ == '__main__':
 
             print("=======FINAL PRINTING ON TEST SET=======")
             # temporarily stop saving test output data bc we already have VERY GOOD test output
-            test_results = evaluate(model, test_words, feature_norms, args, debug='false')
+            test_results = evaluate(model, test_words, feature_norms, args, debug='true')
             #evaluate(test_data_indexed, decoder, print_output=False, outfile=None, use_java=args.perform_java_eval)
             test_stats.append(test_results)
 
