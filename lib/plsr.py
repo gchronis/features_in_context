@@ -56,7 +56,10 @@ class PLSRClassifier(FeatureClassifier):
         return logits
 
 
-    def predict_in_context(self, word, sentence, bert):
+    def predict_in_context(self, word, sentence, bert, glove=False):
+        if glove:
+            return self.predict(word)
+            
         # generate bert vector for word
         vec = bert.get_bert_vectors_for(word, sentence)
         # get the layer we care about
