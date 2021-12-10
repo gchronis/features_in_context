@@ -7,8 +7,8 @@ import subprocess, os
 if __name__ == '__main__':
 
 	models = ['plsr']
-	#datasets = ['mc_rae_real']
-	datasets = ['buchanan']
+	#datasets = ['mc_rae_real', 'buchanan']
+	datasets = ['binder']
 	embeddings = ['5k', '1k', 'glove']
 	plsr_n_components = ['50', '100', '300']
 	plsr_max_iters = ['500']
