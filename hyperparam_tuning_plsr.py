@@ -10,7 +10,8 @@ if __name__ == '__main__':
 	#datasets = ['mc_rae_real', 'buchanan']
 	datasets = ['binder']
 	embeddings = ['5k', '1k', 'glove']
-	plsr_n_components = ['50', '100', '300']
+	plsr_n_components = ['30', '50', '100', '300']
+	#plsr_n_components = ['300']
 	plsr_max_iters = ['500']
 	  
 

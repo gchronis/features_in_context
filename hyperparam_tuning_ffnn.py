@@ -7,8 +7,8 @@ import subprocess, os
 if __name__ == '__main__':
 
 	models = ['ffnn']
-	#datasets = ['mc_rae_real']
-	datasets = ['buchanan']
+	#datasets = ['mc_rae_real', 'buchanan']
+	datasets = ['binder']
 	embeddings = ['5k', '1k', 'glove']
 	epochs = ['30', '50']
 	dropouts = ['0.5', '0.2', '0.0']
