@@ -2,3 +2,6 @@ data/
 __pycache__/
 results/
 notebooks/.ipynb_checkpoints/
+.RData
+.Rhistory
+.DS_Store
