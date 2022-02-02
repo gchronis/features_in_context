@@ -12,6 +12,10 @@ from torch import optim
 import random
 from scipy.spatial.distance import cosine
 from scipy.stats import spearmanr
+from sklearn.metrics import r2_score 
+from sklearn.metrics import mean_squared_error
+
+
 
 
 from typing import List
@@ -575,6 +579,7 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
     top_20_precs = []
     top_k_precs = []
     correlations = []
+    mses = []
 
     num_top_10 = 0
     num_top_20 = 0
@@ -627,6 +632,11 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
         corr, p = spearmanr(prediction, gold)
         correlations.append(corr)
 
+        rsq = r2_score(gold, prediction)
+        mse = mean_squared_error(gold,prediction)
+        mses.append(mse)
+
+
         if ((i % 20 ==0) and debug=='info') or (debug=='true'):
             print(word)
             print("top ten predicted features: ", top_10)
@@ -638,6 +648,7 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
             print("precison: %f" % prec)
             print("correlation: %f" % corr)
             print("top k acc: %f" % top_k_prec)
+            print("coefficient of determination: %f" % rsq )
 
 
     top_10_prec = np.average(top_10_precs)
@@ -645,6 +656,10 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
     top_k_prec = np.average(top_k_precs)
     average_correlation = np.average(correlations)
     average_cosine = np.average(cosines)
+    mse = np.sum(mse)
+
+    R_square = r2_score(y, y_hat)
+
 
     #print(len(y))
     #print(len(y_hat))
@@ -655,10 +670,12 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
     print("Average % @k (derby metric)", top_k_prec)
     #print("Percentage (%) of test items that retrieve their gold-standard vector in the top 10 neighbours of their predicted vector: %f" % top_20_acc)
     print("correlation between gold and predicted vectors: %s " % average_correlation)
+    print('Coefficient of Determination', R_square)
+    print("MSE (summed): %f" % np.sum(mse) )
 
     #raise Exception("what are we doingggg")
 
-    return (top_10_prec, top_20_prec, top_k_prec, average_correlation, average_cosine)
+    return (top_10_prec, top_20_prec, top_k_prec, average_correlation, average_cosine, R_square, mse)
 
 def evaluate_binary(model, dev_exs, feature_norms, args, debug='false'):
 

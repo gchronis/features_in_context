@@ -13,6 +13,8 @@ from typing import List
 import time
 from torch.utils.data import random_split
 import torch
+from ray import tune
+
 
 
 def _parse_args():
@@ -188,13 +190,9 @@ def kfold_split(feature_norms: FeatureNorms, embeddings: MultiProtoTypeEmbedding
 
 
 
+def main(args):
 
 
-
-
-if __name__ == '__main__':
-    args = _parse_args()
-    print(args)
     random.seed(args.seed)
     np.random.seed(args.seed)
 
@@ -289,7 +287,7 @@ if __name__ == '__main__':
         """
         print("=======DEV SET=======")
         # return (top_10_prec, top_20_prec, top_k_prec, average_correlation, average_cosine)
-        MAP_at_10, MAP_at_20, MAP_at_k, correl, cos = evaluate(model, dev_words, feature_norms, args, debug='info')
+        MAP_at_10, MAP_at_20, MAP_at_k, correl, cos, rsquare, mse = evaluate(model, dev_words, feature_norms, args, debug='info')
         # create row of data for results
 
 
@@ -314,11 +312,14 @@ if __name__ == '__main__':
         #     "MAP@20": MAP_at_20,
         #     "MAP_at_k": MAP_at_k,
         #     "average_correlation": correl,
-        #     "average_cosine": cos
+        #     "average_cosine": cos,
+        #     "r_squared": rsquare,
+        #     "mse": mse
         # }
+        # tune.report(mean_accuracy=MAP_at_10)
 
-        # # add row to CSV file
-        # with open('results/plsr_tuning.csv', "a", newline='') as f:
+        # add row to CSV file
+        # with open('results/binder_ffnn_tuning.csv', "a", newline='') as f:
         #     writer = csv.DictWriter(f, fieldnames=results.keys())
         #     writer.writerow(results)
 
@@ -331,6 +332,8 @@ if __name__ == '__main__':
         for test_word in test_words:
             print(test_word)
         results = evaluate(model, test_words, feature_norms, args, debug='true')
+        tune.report(mean_accuracy=MAP_at_10)
+
 
     elif args.k_fold:
         """
@@ -427,4 +430,12 @@ if __name__ == '__main__':
 
     if args.save_path is not None:
         torch.save(model, args.save_path)
-        print("Wrote trained model to ", args.save_path)
+        print("Wrote trained model to ", args.save_path)    
+
+
+
+if __name__ == '__main__':
+    args = _parse_args()
+
+    print(args)
+    main(args)
