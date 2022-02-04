@@ -5,3 +5,4 @@ notebooks/.ipynb_checkpoints/
 .RData
 .Rhistory
 .DS_Store
+trained_models/*
