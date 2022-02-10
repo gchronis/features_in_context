@@ -52,7 +52,7 @@ def add_models_args(parser):
     parser.add_argument('--mu2', type=float, default=None, help='mu_cont (Talukdar and Kramer 2009)')
     parser.add_argument('--mu3', type=float, default=None, help='mu_abdn (Talukdar and Kramer 2009)')
     parser.add_argument('--mu4', type=float, default=None, help='ModAds NNk (Rosenfeld and Erk 2019)')
-    parser.add_argument('--nnk', type=float, default=None, help='ModAds equal/decay n (Rosenfeld and Erk 2019')
+    parser.add_argument('--nnk', type=int, default=None, help='ModAds equal/decay n (Rosenfeld and Erk 2019')
 
 
 # class DumbClassifier(object):
