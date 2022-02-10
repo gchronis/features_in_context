@@ -44,6 +44,10 @@ def _parse_args():
     parser.add_argument('--dev_equals_train', dest='dev_equals_train', default=False, action='store_true', help='use the training words as dev set for debug')
     parser.add_argument('--allbuthomonyms', dest='allbuthomonyms', default=False, action='store_true', help='train on all available words except for homonyms')
 
+    parser.add_argument('--tuning', default=False, action='store_true', help="writes stats to tuning file; does not save trained model")
+
+
+
     add_models_args(parser) # defined in models.py
 
     args = parser.parse_args()
@@ -294,34 +298,46 @@ def main(args):
         """
         UNCOMMENT FOR hyperparameter tuning printouts
         """
-        # results = {
-        #     "train_dev_test": "dev",
-        #     "model": args.model,
-        #     "dataset": args.train_data,
-        #     "embedding_type": args.embedding_type,
-        #     "layer": args.layer,
-        #     "clusters": args.clusters,
-        #     "epochs": args.epochs,
-        #     "dropout": args.dropout,
-        #     "learning_rate": args.lr,
-        #     "hidden_size": args.hidden_size,
-        #     "plsr_n_components": args.plsr_n_components,
-        #     "plsr_max_iter": args.plsr_max_iter,
-        #     "save_path": args.save_path,
-        #     "MAP@10": MAP_at_10,
-        #     "MAP@20": MAP_at_20,
-        #     "MAP_at_k": MAP_at_k,
-        #     "average_correlation": correl,
-        #     "average_cosine": cos,
-        #     "r_squared": rsquare,
-        #     "mse": mse
-        # }
-        # tune.report(mean_accuracy=MAP_at_10)
+        if args.tuning:
+            results = {
+                "train_dev_test": "dev",
+                "model": args.model,
+                "dataset": args.train_data,
+                "embedding_type": args.embedding_type,
+                "layer": args.layer,
+                "clusters": args.clusters,
+                "epochs": args.epochs,
+                "dropout": args.dropout,
+                "learning_rate": args.lr,
+                "hidden_size": args.hidden_size,
+                "plsr_n_components": args.plsr_n_components,
+                "plsr_max_iter": args.plsr_max_iter,
+                "mu1": args.mu1,
+                "mu2": args.mu2,
+                "mu3": args.mu3,
+                "mu4": args.mu4,
+                "nnk": args.nnk,
+                "save_path": args.save_path,
+                "MAP@10": MAP_at_10,
+                "MAP@20": MAP_at_20,
+                "MAP_at_k": MAP_at_k,
+                "average_correlation": correl,
+                "average_cosine": cos,
+                "r_squared": rsquare,
+                "mse": mse
+            }
+            # tune.report(mean_accuracy=MAP_at_10)
 
-        # add row to CSV file
-        # with open('results/binder_ffnn_tuning.csv', "a", newline='') as f:
-        #     writer = csv.DictWriter(f, fieldnames=results.keys())
-        #     writer.writerow(results)
+            results_path = 'results/tuning_stats.csv'
+            # create tuning file if it doesn't exist, add headers
+            if not os.path.exists(results_path):
+                with open(results_path, "w", newline='') as f:
+                    writer = csv.DictWriter(f, fieldnames=results.keys())
+                    writer.writerow(results.keys)
+            # add row to existing  CSV file
+            with open(results_path, "a", newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=results.keys())
+                writer.writerow(results)
 
         ##################################################
 
@@ -428,9 +444,10 @@ def main(args):
         print("test set results")
         print(df)
 
-    if args.save_path is not None:
-        torch.save(model, args.save_path)
-        print("Wrote trained model to ", args.save_path)    
+    if (args.save_path is not None):
+        if not args.tuning:
+            torch.save(model, args.save_path)
+            print("Wrote trained model to ", args.save_path)    
 
 
 
