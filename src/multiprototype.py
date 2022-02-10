@@ -1,6 +1,6 @@
-from lib.bert import *
-from lib.utils import *
-from lib.bnc import *
+from bert import *
+from utils import *
+from bnc import *
 import os, shutil
 from itertools import zip_longest
 import numpy as np

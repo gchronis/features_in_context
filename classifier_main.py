@@ -1,14 +1,14 @@
 import argparse
 import random
 import numpy as np
-from lib.models import *
-from lib.label_propagation import *
-from lib.plsr import *
-from lib.knn import *
-from lib.modabs import *
-from lib.feature_data import *
-from lib.multiprototype import *
-from lib.utils import *
+from src.models import *
+from src.label_propagation import *
+from src.plsr import *
+from src.knn import *
+from src.modabs import *
+from src.feature_data import *
+from src.multiprototype import *
+from src.utils import *
 from typing import List
 import time
 from torch.utils.data import random_split
@@ -202,24 +202,24 @@ def main(args):
 
     if args.train_data == 'mc_rae_real':
         print("gets here")
-        feature_norms = McRaeFeatureNorms('data/mcrae/CONCS_FEATS_concstats_brm/concepts_features-Table1.csv')
+        feature_norms = McRaeFeatureNorms('data/external/mcrae/CONCS_FEATS_concstats_brm/concepts_features-Table1.csv')
     elif args.train_data == 'mc_rae_subset':
-        feature_norms = BuchananFeatureNorms('data/buchanan/cue_feature_words.csv', subset='mc_rae_subset')
+        feature_norms = BuchananFeatureNorms('data/external/buchanan/cue_feature_words.csv', subset='mc_rae_subset')
     elif args.train_data == 'buchanan':
-        feature_norms = BuchananFeatureNorms('data/buchanan/cue_feature_words.csv')
+        feature_norms = BuchananFeatureNorms('data/external/buchanan/cue_feature_words.csv')
     elif args.train_data == 'binder':
-        feature_norms = BinderFeatureNorms('/Users/gabriellachronis/data/binder_word_ratings/WordSet1_Ratings.csv')
+        feature_norms = BinderFeatureNorms('data/external/binder_word_ratings/WordSet1_Ratings.csv')
     else:
         raise Exception("dataset not implemented")
 
 
     if args.embedding_type == 'bert':
-        embedding_file = './data/multipro_embeddings/layer'+ str(args.layer) + 'clusters' + str(args.clusters) + '.txt'
+        embedding_file = './data/processed/multipro_embeddings/layer'+ str(args.layer) + 'clusters' + str(args.clusters) + '.txt'
         embs = read_multiprototype_embeddings(embedding_file, layer=args.layer, num_clusters=args.clusters)
     elif args.embedding_type == 'glove':
         embeddings_list = []
         word_indexer = Indexer()
-        with open("data/glove.6B/glove.6B.300d.txt", 'r') as f:
+        with open("data/external/glove.6B/glove.6B.300d.txt", 'r') as f:
             for line in f:
                 values = line.split()
                 word = values[0]

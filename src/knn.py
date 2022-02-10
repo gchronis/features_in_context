@@ -1,7 +1,7 @@
 from typing import List
-from lib.multiprototype import *
-from lib.feature_data import *
-from lib.models import FeatureClassifier, BinaryClassifier, form_input, evaluate
+from multiprototype import *
+from feature_data import *
+from models import FeatureClassifier, BinaryClassifier, form_input, evaluate
 from sklearn.neighbors import KNeighborsRegressor
 from scipy.spatial.distance import cosine
 
