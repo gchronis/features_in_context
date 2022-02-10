@@ -1,14 +1,14 @@
 import argparse
 import random
 import numpy as np
-from lib.models import *
-from lib.label_propagation import *
-from lib.plsr import *
-from lib.knn import *
-from lib.modabs import *
-from lib.feature_data import *
-from lib.multiprototype import *
-from lib.utils import *
+from src.models import *
+from src.label_propagation import *
+from src.plsr import *
+from src.knn import *
+from src.modabs import *
+from src.feature_data import *
+from src.multiprototype import *
+from src.utils import *
 from typing import List
 import time
 from torch.utils.data import random_split
@@ -43,6 +43,10 @@ def _parse_args():
     parser.add_argument('--kfold', dest='k_fold', type=int, default=False, help='train using k-fold cross validation')
     parser.add_argument('--dev_equals_train', dest='dev_equals_train', default=False, action='store_true', help='use the training words as dev set for debug')
     parser.add_argument('--allbuthomonyms', dest='allbuthomonyms', default=False, action='store_true', help='train on all available words except for homonyms')
+
+    parser.add_argument('--tuning', default=False, action='store_true', help="writes stats to tuning file; does not save trained model")
+
+
 
     add_models_args(parser) # defined in models.py
 
@@ -202,24 +206,24 @@ def main(args):
 
     if args.train_data == 'mc_rae_real':
         print("gets here")
-        feature_norms = McRaeFeatureNorms('data/mcrae/CONCS_FEATS_concstats_brm/concepts_features-Table1.csv')
+        feature_norms = McRaeFeatureNorms('data/external/mcrae/CONCS_FEATS_concstats_brm/concepts_features-Table1.csv')
     elif args.train_data == 'mc_rae_subset':
-        feature_norms = BuchananFeatureNorms('data/buchanan/cue_feature_words.csv', subset='mc_rae_subset')
+        feature_norms = BuchananFeatureNorms('data/external/buchanan/cue_feature_words.csv', subset='mc_rae_subset')
     elif args.train_data == 'buchanan':
-        feature_norms = BuchananFeatureNorms('data/buchanan/cue_feature_words.csv')
+        feature_norms = BuchananFeatureNorms('data/external/buchanan/cue_feature_words.csv')
     elif args.train_data == 'binder':
-        feature_norms = BinderFeatureNorms('/Users/gabriellachronis/data/binder_word_ratings/WordSet1_Ratings.csv')
+        feature_norms = BinderFeatureNorms('data/external/binder_word_ratings/WordSet1_Ratings.csv')
     else:
         raise Exception("dataset not implemented")
 
 
     if args.embedding_type == 'bert':
-        embedding_file = './data/multipro_embeddings/layer'+ str(args.layer) + 'clusters' + str(args.clusters) + '.txt'
+        embedding_file = './data/processed/multipro_embeddings/layer'+ str(args.layer) + 'clusters' + str(args.clusters) + '.txt'
         embs = read_multiprototype_embeddings(embedding_file, layer=args.layer, num_clusters=args.clusters)
     elif args.embedding_type == 'glove':
         embeddings_list = []
         word_indexer = Indexer()
-        with open("data/glove.6B/glove.6B.300d.txt", 'r') as f:
+        with open("data/external/glove.6B/glove.6B.300d.txt", 'r') as f:
             for line in f:
                 values = line.split()
                 word = values[0]
@@ -294,34 +298,46 @@ def main(args):
         """
         UNCOMMENT FOR hyperparameter tuning printouts
         """
-        # results = {
-        #     "train_dev_test": "dev",
-        #     "model": args.model,
-        #     "dataset": args.train_data,
-        #     "embedding_type": args.embedding_type,
-        #     "layer": args.layer,
-        #     "clusters": args.clusters,
-        #     "epochs": args.epochs,
-        #     "dropout": args.dropout,
-        #     "learning_rate": args.lr,
-        #     "hidden_size": args.hidden_size,
-        #     "plsr_n_components": args.plsr_n_components,
-        #     "plsr_max_iter": args.plsr_max_iter,
-        #     "save_path": args.save_path,
-        #     "MAP@10": MAP_at_10,
-        #     "MAP@20": MAP_at_20,
-        #     "MAP_at_k": MAP_at_k,
-        #     "average_correlation": correl,
-        #     "average_cosine": cos,
-        #     "r_squared": rsquare,
-        #     "mse": mse
-        # }
-        # tune.report(mean_accuracy=MAP_at_10)
+        if args.tuning:
+            results = {
+                "train_dev_test": "dev",
+                "model": args.model,
+                "dataset": args.train_data,
+                "embedding_type": args.embedding_type,
+                "layer": args.layer,
+                "clusters": args.clusters,
+                "epochs": args.epochs,
+                "dropout": args.dropout,
+                "learning_rate": args.lr,
+                "hidden_size": args.hidden_size,
+                "plsr_n_components": args.plsr_n_components,
+                "plsr_max_iter": args.plsr_max_iter,
+                "mu1": args.mu1,
+                "mu2": args.mu2,
+                "mu3": args.mu3,
+                "mu4": args.mu4,
+                "nnk": args.nnk,
+                "save_path": args.save_path,
+                "MAP@10": MAP_at_10,
+                "MAP@20": MAP_at_20,
+                "MAP_at_k": MAP_at_k,
+                "average_correlation": correl,
+                "average_cosine": cos,
+                "r_squared": rsquare,
+                "mse": mse
+            }
+            # tune.report(mean_accuracy=MAP_at_10)
 
-        # add row to CSV file
-        # with open('results/binder_ffnn_tuning.csv', "a", newline='') as f:
-        #     writer = csv.DictWriter(f, fieldnames=results.keys())
-        #     writer.writerow(results)
+            results_path = 'results/tuning_stats.csv'
+            # create tuning file if it doesn't exist, add headers
+            if not os.path.exists(results_path):
+                with open(results_path, "w", newline='') as f:
+                    writer = csv.DictWriter(f, fieldnames=results.keys())
+                    writer.writerow(results.keys)
+            # add row to existing  CSV file
+            with open(results_path, "a", newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=results.keys())
+                writer.writerow(results)
 
         ##################################################
 
@@ -428,9 +444,10 @@ def main(args):
         print("test set results")
         print(df)
 
-    if args.save_path is not None:
-        torch.save(model, args.save_path)
-        print("Wrote trained model to ", args.save_path)    
+    if (args.save_path is not None):
+        if not args.tuning:
+            torch.save(model, args.save_path)
+            print("Wrote trained model to ", args.save_path)    
 
 
 
