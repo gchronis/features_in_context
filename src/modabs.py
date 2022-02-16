@@ -348,7 +348,7 @@ def train_mad(train_exs: List[str], dev_exs: List[str], test_exs: List[str], mul
 
     print(similarity_matrix.shape)
 
-    model = MAD(beta=4, mu1=args.mu1, mu2=args.mu2, mu3=args.mu3, mu4=args.mu4, NNk=args.nnk)
+    model = MAD(beta=4, mu1=args['mu1'], mu2=args['mu2'], mu3=args['mu3'], mu4=args['mu4'], NNk=args['nnk'])
 
     #print(len(X))
     #print(len(this_feature_for_all_words))
