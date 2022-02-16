@@ -1,7 +1,7 @@
 # feature_data.py
 
 from typing import List
-from utils import *
+from src.utils import *
 import re
 import numpy as np
 from collections import Counter

@@ -2,10 +2,10 @@
 
 import time
 import numpy as np
-from utils import *
+from src.utils import *
 from collections import Counter
-from multiprototype import *
-from feature_data import *
+from src.multiprototype import *
+from src.feature_data import *
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import optim
