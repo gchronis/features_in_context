@@ -117,7 +117,7 @@ if __name__ == '__main__':
 			num_samples=15,
 	    	#name="main_2022-02-11_15-08-47",
 	    	name="modabs_tuning",
-	    	trial_name_creator = tune.function(lambda trial: trial.config['embedding_type'] + str(trial.config['clusters']) + '_' + trial.trial_id)
+	    	trial_name_creator = tune.function(lambda trial: trial.config['embedding_type'] + str(trial.config['clusters']) + '_' + trial.trial_id),
 	    	resume=True
 		)
 
