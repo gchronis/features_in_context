@@ -148,7 +148,7 @@ def train_plsr(train_exs: List[str], dev_exs: List[str], multipro_embs: MultiPro
     print(len(y))
 
 
-    plsr = PLSRegression(n_components=args.plsr_n_components, max_iter=args.plsr_max_iter, scale=True)
+    plsr = PLSRegression(n_components=args['plsr_n_components'], max_iter=args['plsr_max_iter'], scale=True)
     plsr.fit(X, y)
 
     model = PLSRClassifier(plsr, multipro_embs, feature_norms)

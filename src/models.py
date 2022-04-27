@@ -427,14 +427,14 @@ def form_output(word: str, norms: FeatureNorms, binary=False):
     return norm
 
 def train_ffnn(train_exs: List[str], dev_exs: List[str], multipro_embs: MultiProtoTypeEmbeddings, feature_norms: FeatureNorms, args) -> FeatureClassifier:
-    num_epochs = args.epochs
-    batch_size = args.batch_size
-    initial_learning_rate = args.lr
-    hidden_size = args.hidden_size
+    num_epochs = args['epochs']
+    batch_size = args['batch_size']
+    initial_learning_rate = args['lr']
+    hidden_size = args['hidden_size']
     multipro_vec_size = multipro_embs.dim
     num_classes = feature_norms.length
     num_bags = multipro_embs.num_prototypes
-    dropout = args.dropout
+    dropout = args['dropout']
 
     ffnn = FFNN(multipro_vec_size, hidden_size, num_classes, num_bags, dropout)
 
@@ -656,7 +656,7 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
     top_k_prec = np.average(top_k_precs)
     average_correlation = np.average(correlations)
     average_cosine = np.average(cosines)
-    mse = np.sum(mse)
+    mse = np.sum(mses)
 
     R_square = r2_score(y, y_hat)
 
