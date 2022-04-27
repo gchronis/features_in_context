@@ -167,12 +167,12 @@ class FeatureClassifier(object):
 
         return logits
 
-    def predict_top_n_features_in_context(self, word, sentence, n, bert=None, vec=None):
+    def predict_top_n_features_in_context(self, word, sentence, n, bert=None, vec=None, glove=False):
 
         if vec is not None:
             logits = vec
         else:
-            logits = self.predict_in_context(word, sentence, bert)
+            logits = self.predict_in_context(word, sentence, bert, glove=glove)
             #logits = logits.detach().numpy()
     
         # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
