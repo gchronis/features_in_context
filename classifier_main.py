@@ -265,7 +265,7 @@ def main(args):
         #    print(train_data_indexed[i])
     start = time.time()
     if args['do_dumb_thing']:
-        decoder = DumbClassifier(train_data_indexed)
+        model = FrequencyClassifier(feature_norms)
     elif args['model'] == 'binary':
         model = train_binary_classifier(train_words, dev_words, embs, feature_norms, args)
     elif args['model'] == 'ffnn':

@@ -55,42 +55,10 @@ def add_models_args(parser):
     parser.add_argument('--nnk', type=int, default=None, help='ModAds equal/decay n (Rosenfeld and Erk 2019')
 
 
-# class DumbClassifier(object):
-#     """
-#     Person classifier that takes counts of how often a word was observed to be the positive and negative class
-#     in training, and classifies as positive any tokens which are observed to be positive more than negative.
-#     Unknown tokens or ties default to negative.
-#     Attributes:
-#         pos_counts: how often each token occurred with the label 1 in training
-#         neg_counts: how often each token occurred with the label 0 in training
-#     """
-#     def __init__(self, pos_counts: Counter, neg_counts: Counter):
-#         self.pos_counts = pos_counts
-#         self.neg_counts = neg_counts
-
-#     def predict(self, tokens: List[str], idx: int):
-#         if self.pos_counts[tokens[idx]] > self.neg_counts[tokens[idx]]:
-#             return 1
-#         else:
-#             return 0
 
 
-# def train_count_based_binary_classifier(ner_exs: List[PersonExample]) -> CountBasedPersonClassifier:
-#     """
-#     :param ner_exs: training examples to build the count-based classifier from
-#     :return: A CountBasedPersonClassifier using counts collected from the given examples
-#     """
-#     pos_counts = Counter()
-#     neg_counts = Counter()
-#     for ex in ner_exs:
-#         for idx in range(0, len(ex)):
-#             if ex.labels[idx] == 1:
-#                 pos_counts[ex.tokens[idx]] += 1.0
-#             else:
-#                 neg_counts[ex.tokens[idx]] += 1.0
-#     print("All counts: " + repr(pos_counts))
-#     print("Count of Peter: " + repr(pos_counts["Peter"]))
-#     return CountBasedPersonClassifier(pos_counts, neg_counts)
+
+
 
 
 class FeatureClassifier(object):
@@ -186,6 +154,40 @@ class FeatureClassifier(object):
 
         #print(feats)
         return feats
+
+class FrequencyClassifier(FeatureClassifier):
+    """
+    Person classifier that takes counts of how often a word was observed to be the positive and negative class
+    in training, and classifies as positive any tokens which are observed to be positive more than negative.
+    Unknown tokens or ties default to negative.
+    Attributes:
+        pos_counts: how often each token occurred with the label 1 in training
+        neg_counts: how often each token occurred with the label 0 in training
+    """
+    def __init__(self, feature_norms):
+        vecs = []
+        self.feature_norms = feature_norms
+        words = self.feature_norms.feature_norms.keys()
+        for word in words:
+            vec = feature_norms.get_feature_vector(word)
+            vecs.append(vec)
+            
+        avg_features = np.average(vecs, axis=0)
+        print(avg_features)
+
+        ind = np.argpartition(avg_features, -10)[-10:]
+        feats = []
+        for i in ind:
+            feat = feature_norms.feature_map.get_object(i)
+            feats.append(feat)
+        print(feats)
+        
+        self.prediction = avg_features
+        
+
+    def predict(self, word):
+        return self.prediction
+
 
 class BinaryClassifier(object):
 #     """
