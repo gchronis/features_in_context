@@ -12,6 +12,8 @@ from src.feature_data import *
 from src.utils import cosine_similarity_matrix
 from src.models import FeatureClassifier
 from scipy import spatial
+from sklearn.preprocessing import normalize
+
 import math
 
 
@@ -110,34 +112,21 @@ class MAD(FeatureClassifier):
         self._p_abdn = np.zeros(self._num_samples)
         return P
 
+
     def _find_nearest_neighbor(self, vector):
-        vector = np.array(vector)
-        vector = np.expand_dims(vector, axis=1)
-        print("calculating similarities with neighbors")
-        print(self.predictions.shape)
-        print(vector.shape)
-        sims = cosine_similarity_matrix(self.predictions, vector)
-        print("done calculating similarities with neighbors")
-
-        max_value = max(sims)
-        max_index = sims.index(max_value)
-        neighbor = self.predictions[max_index]
-        # try:
-        #     d, i = self.kd_tree.query(vector, 1) # 1 is number of neighbors to return
-        # except:
-        #     print("building kdtree for nneighbor queries for modabs model")
-        #     self.kd_tree = spatial.KDTree(self.predictions)
-        #     print("done building kdtree for nneighbor queries for modabs model")
-        #     d, i = self.kd_tree.query(vector, 1)
-        # vector = self.kd_tree.data[i]
-
-        #word_index = i - (i % self.num_prototypes)
-
-        # have to do this in a fucked up reverse lookup because you didnt make a nice indexer
-        #rev_index = [w for w in self.predictions if word_index[w] == i]
-        #logits = rev_index[0]
-
+        """
+        returns indexer label of nearest neighbor in the graph according to bert
+        """
+        #vector = np.array(vector)
+        #vector = np.expand_dims(vector, axis=1)
+        #print("calculating similarities with neighbors")
+        #vector = normalize(vector, axis=0, norm='l1')
+        #vector = vector.reshape(1, -1)
+        distance, index = self.kd_tree.query(vector)
+        #print(distance, index)
+        neighbor = self.word_indexer.get_object(index)
         return neighbor
+
 
     def fit(self, X, Y, C=None):
         X = X.astype(np.float32)
@@ -213,28 +202,112 @@ class MAD(FeatureClassifier):
         #exit()
 
     def predict(self, word: str):
-        labels = [word + '_' + str(i) for i in range(0, self.num_prototypes)]
-        #print(labels)
-        vectors = np.empty([self.num_prototypes, self.output_dims])
-        #print(vectors.shape)
-        for i in range(0,len(labels)):
-            label = labels[i]
-            #print(label)
-            #print(self.word_indexer.objs_to_ints)
-            word_index = self.word_indexer.index_of(label)
-            #print(word_index)
-            vec = self.predictions[word_index]
-            #print(vec.shape)
 
-            vectors[i,:] = vec
-        #vectors = self.predictions[word_index:(word_index + self.num_prototypes), :]
-        #print(vectors.shape)
-        avg = np.average(vectors, axis=0)
-        return avg
+            #labels = [word + '_' + str(i) for i in range(0, self.num_prototypes)]
+            #print(labels)
+            print("predicting features for ", word)
+            vectors = np.empty([self.num_prototypes, self.output_dims])
+            #print(vectors.shape)
+            
+            """
+            get prediction for each prototype; or,
+            get nearest neighbor of each prototype and get prediction for that
+            """
+            mpro_vecs = self.multipro_embeddings.get_embedding(word)
+            for i in range(0,self.num_prototypes):
+                #label = labels[i]
+
+                #word_index = self.word_indexer.index_of(label)                
+                """
+                if this word is not in the graph, we need to find the nearest vector
+                in the graph and use the predictions we have stored for that instead. 
+                really, it seems we need more words in the graph for label prop to do its work the best
+                """
+            #    if word_index == -1:
+            #        print("doesnt have word in graph:")
+            #        print(label)
+
+                # get multipro vector
+                # get vector at current index
+                mpro_vec = mpro_vecs[i]
+                #print(mpro_vec[:15])
+                
+                """
+                then, we need to calculate the similarity between this and all of the mpro embeddings in our model, on the fly
+                would help if we already had them stored in the model
+                """
+                neighbor = self._find_nearest_neighbor(mpro_vec)
+                #rint("nearest neighbor in graph: " , neighbor)
+                word_index = self.word_indexer.index_of(neighbor)
+
+                vec = self.predictions[word_index]
+                
+                # otherwise we have the word in our graph already
+                #else:
+                #    vec = self.predictions[word_index]
+                #print(vec.shape)
+
+                vectors[i,:] = vec
+            #vectors = self.predictions[word_index:(word_index + self.num_prototypes), :]
+            #print(vectors.shape)
+            
+            # then average the predictions
+            avg = np.average(vectors, axis=0)
+            return avg
+
+    # def predict(self, word: str):
+    #     labels = [word + '_' + str(i) for i in range(0, self.num_prototypes)]
+    #     #print(labels)
+    #     vectors = np.empty([self.num_prototypes, self.output_dims])
+    #     #print(vectors.shape)
+    #     for i in range(0,len(labels)):
+    #         label = labels[i]
+    #         #print(label)
+    #         #print(self.word_indexer.objs_to_ints)
+    #         word_index = self.word_indexer.index_of(label)
+    #         #print(word_index)
+    #         vec = self.predictions[word_index]
+    #         #print(vec.shape)
+
+    #         vectors[i,:] = vec
+    #     #vectors = self.predictions[word_index:(word_index + self.num_prototypes), :]
+    #     #print(vectors.shape)
+    #     avg = np.average(vectors, axis=0)
+    #     return avg
 
     #def predict_top_n_features(self, word: str, n: int, vec=None):
     #    raise Exception("Not implemented")
 
+
+
+    # def predict_in_context(self, word, sentence, bert, glove=False):
+    #     if glove:
+    #         return self.predict(word)
+    #     # generate bert vector for word
+    #     vec = bert.get_bert_vectors_for(word, sentence)
+    #     # get the layer we care about
+    #     vec = vec[8]
+
+    #     # reshape to be vertical
+    #     vec = vec.reshape(1, -1)
+    #     #print("after reshape")
+    #     #print(vec.shape)
+
+
+    #     """
+    #     find the nearest neighbor to the input vector
+    #     """
+    #     # TODO to predict the nearest neighbor by word we have to fix the counter to an indexer and retrain all the saved models =/
+
+    #     # find the closest input embedding to our context vector
+    #     label, vec = self.multipro_embeddings._find_nearest_neighbor(vec)
+
+    #     # use the label to find the projection we have stored for that embedding
+    #     index = self.word_indexer.index_of(label)
+
+    #     logits = self.predictions[index]
+
+    #     return logits
 
 
     def predict_in_context(self, word, sentence, bert, glove=False):
@@ -246,19 +319,14 @@ class MAD(FeatureClassifier):
         vec = vec[8]
 
         # reshape to be vertical
-        vec = vec.reshape(1, -1)
         #print("after reshape")
         #print(vec.shape)
 
-
-        """
-        find the nearest neighbor to the input vector
-        """
-        # TODO to predict the nearest neighbor by word we have to fix the counter to an indexer and retrain all the saved models =/
-
         # find the closest input embedding to our context vector
-        label, vec = self.multipro_embeddings.find_nearest_neighbor(vec)
+        label = self._find_nearest_neighbor(vec)
 
+        print(label)
+        
         # use the label to find the projection we have stored for that embedding
         index = self.word_indexer.index_of(label)
 
@@ -285,6 +353,8 @@ def train_mad(train_exs: List[str], dev_exs: List[str], test_exs: List[str], mul
     X = np.empty([num_samples, multipro_embs.dim])
     # initialize empty matrix to hold gold labels
     # [number of vectors x size of feature norm fectors]
+
+
     Y = np.empty([num_samples, feature_norms.length])
 
     word_indexer = Indexer()
@@ -348,6 +418,13 @@ def train_mad(train_exs: List[str], dev_exs: List[str], test_exs: List[str], mul
     # e.g., similarity_matrix[i,j] = cosine(word[i], word[j])
     similarity_matrix = cosine_similarity_matrix(X,X)
 
+
+    """
+    make kdtree for easy cosine comparisons for finding nearest neighbors. have to normalize vectors first
+    """
+    X_normed = normalize(X, axis=1, norm='l1')
+    kd_tree = spatial.KDTree(X)
+
     print(similarity_matrix.shape)
 
     model = MAD(beta=4, mu1=args['mu1'], mu2=args['mu2'], mu3=args['mu3'], mu4=args['mu4'], NNk=args['nnk'])
@@ -365,6 +442,7 @@ def train_mad(train_exs: List[str], dev_exs: List[str], test_exs: List[str], mul
     model.feature_norms = feature_norms
     model.multipro_embeddings = multipro_embs
     model.output_dims = predictions.shape[1]
+    model.kd_tree = kd_tree
     
     """
     we also need i think our unlabeled examples?
