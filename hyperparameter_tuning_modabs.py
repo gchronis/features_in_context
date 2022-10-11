@@ -12,8 +12,8 @@ if __name__ == '__main__':
 
 	models = ['modabs']
 	#datasets = ['mc_rae_real'] # THIS IS DONE
-	datasets = ['buchanan'] # this is NOT done
-	#datasets = ['binder']
+	#datasets = ['buchanan'] # this is NOT done
+	datasets = ['binder']
 	embeddings = ['5k', '1k', 'glove']
 	mu1s = [1]
 	mu2s = [10e-8, 10e-4,10e-2, 1, 10, 100, 1000]
@@ -39,8 +39,8 @@ if __name__ == '__main__':
 			"layer": 8,
 			"clusters": tune.grid_search([1,5]),
 			"embedding_type": tune.grid_search(['bert', 'glove']),
-			"model": tune.choice(['modabs']),
-			"train_data": tune.choice(['buchanan']),
+			"model": tune.choice(models),
+			"train_data": tune.grid_search(datasets),
 			"mu1": 1,
 			"mu2": tune.choice(mu2s),
 		    "mu3": tune.choice(mu3s),
@@ -98,7 +98,7 @@ if __name__ == '__main__':
 		scheduler=ASHAScheduler(metric="MAP_at_k", mode="max"),
 		num_samples=25,
     	#name="main_2022-02-11_15-08-47",
-    	name="modabs_tuning_buchanan",
+    	name="modabs_tuning_binder",
     	#trial_name_creator = tune.function(lambda trial: trial.config['embedding_type'] + str(trial.config['clusters']) + '_' + trial.trial_id),
     	resume="AUTO"
 	)
