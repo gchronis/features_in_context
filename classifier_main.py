@@ -14,6 +14,8 @@ import time
 from torch.utils.data import random_split
 import torch
 from ray import tune
+import scipy.stats as stats
+
 
 
 
@@ -45,7 +47,7 @@ def _parse_args():
     parser.add_argument('--allbuthomonyms', dest='allbuthomonyms', default=False, action='store_true', help='train on all available words except for homonyms')
 
     parser.add_argument('--tuning', default=False, action='store_true', help="writes stats to tuning file; does not save trained model")
-
+    parser.add_argument('--zscore', default=False, action='store_true', help="zscore postprocessing on embeddings")
 
 
     add_models_args(parser) # defined in models.py
@@ -225,6 +227,7 @@ def main(args):
     if args['embedding_type'] == 'bert':
         embedding_file = './data/processed/multipro_embeddings/layer'+ str(args['layer']) + 'clusters' + str(args['clusters']) + '.txt'
         embs = read_multiprototype_embeddings(embedding_file, layer=args['layer'], num_clusters=args['clusters'])
+
     elif args['embedding_type'] == 'glove':
         embeddings_list = []
         word_indexer = Indexer()
@@ -241,7 +244,12 @@ def main(args):
 
         embs = MultiProtoTypeEmbeddings(word_indexer, np.array(embeddings_list), 0, 1) # dummy layer, clusters = 1
 
-
+    if args['zscore']:
+        print("training on zscore-normalized embeddings")
+        reshape = embs.vectors.reshape(61740, 768)
+        zscored = stats.zscore(reshape, axis=0)
+        rereshape = zscored.reshape(embs.vectors.shape[0], 5, 768)
+        embs.vectors = rereshape
 
     train_words, dev_words, test_words = prepare_data(feature_norms, embs, allbuthomonyms=args['allbuthomonyms'])
 
