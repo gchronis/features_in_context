@@ -55,6 +55,16 @@ class PLSRClassifier(FeatureClassifier):
         #print(logits.shape)
         return logits
 
+    def predict_from_single_context_vector(self, word, vec):
+        # code from form_input bc we already have embedding
+        x =  torch.from_numpy(vec).float()
+        # the model needs a vertical vector
+        x = x.reshape(1, -1)
+        logits = self.model.predict(x)
+        # and it returns a verticla vector. our code wants it to be horizontal again, so we reshape again
+        logits = logits[0]
+        
+        return (word, logits)
 
     def predict_in_context(self, word, sentence, bert, glove=False):
         if glove:
