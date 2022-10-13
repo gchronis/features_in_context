@@ -38,7 +38,7 @@ class MultiProtoTypeEmbeddings:
         else:
             return self.vectors[self.word_indexer.index_of("UNK")]
 
-    def get_embeddinge_at_absolute_index(self, index):
+    def get_embedding_at_absolute_index(self, index):
         None
 
 
@@ -90,7 +90,8 @@ def parseline(line: str):
         vector = np.array(float_numbers)
         return(word, vector)
     else:
-        return None
+        print("problem parsing")
+        raise Exception("Problem Parsing line")
 
 def read_multiprototype_embeddings(embeddings_file: str, layer=8, num_clusters=1) -> MultiProtoTypeEmbeddings:
     """
@@ -110,12 +111,22 @@ def read_multiprototype_embeddings(embeddings_file: str, layer=8, num_clusters=1
 
     n = num_clusters
 
+    i=0
     for lines in grouper(f, n, ''):
+
+        if i % 1000 == 0:
+            print(i)
+        i +=1
+
+        # process Num prototypes lines here
         assert len(lines) == n
-        # process N lines here
         prototypes = []
         for line in lines:
-            word, vector = parseline(line)
+            try:
+                word, vector = parseline(line)
+            except:
+                print(i-1)
+                #print("last word: ", lines[i-1]) 
             #print(word)
             #print(vector.shape)
             prototypes.append(vector)

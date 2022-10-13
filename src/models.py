@@ -691,7 +691,7 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
     top_k_prec = np.average(top_k_precs)
     average_correlation = np.average(correlations)
     average_cosine = np.average(cosines)
-    mse = np.sum(mses)
+    mse = np.average(mses)
 
     R_square = r2_score(y, y_hat)
 
@@ -706,44 +706,52 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
     #print("Percentage (%) of test items that retrieve their gold-standard vector in the top 10 neighbours of their predicted vector: %f" % top_20_acc)
     print("correlation between gold and predicted vectors: %s " % average_correlation)
     print('Coefficient of Determination', R_square)
-    print("MSE (summed): %f" % np.sum(mse) )
+    print("MSE: %f" % mse )
 
     #raise Exception("what are we doingggg")
 
-    return (top_10_prec, top_20_prec, top_k_prec, average_correlation, average_cosine, R_square, mse)
+    results =  {
+        "MAP_at_10": top_10_prec, 
+        "MAP_at_20": top_20_prec, 
+        "MAP_at_k": top_k_prec, 
+        "correl": average_correlation, 
+        "cos": average_cosine, 
+        "rsquare": R_square, 
+        "mse": mse }
+    return results
 
-def evaluate_binary(model, dev_exs, feature_norms, args, debug='false'):
+# def evaluate_binary(model, dev_exs, feature_norms, args, debug='false'):
 
-    y_hat = []
-    y = []
-    cosines = []
-    precs = []
-    correlations = []
+#     y_hat = []
+#     y = []
+#     cosines = []
+#     precs = []
+#     correlations = []
 
-    for i in range(0,len(dev_exs)):
-        word = dev_exs[i]
+#     for i in range(0,len(dev_exs)):
+#         word = dev_exs[i]
 
-        prediction = model.predict(word)
-        y_hat.append(prediction)
-
-
-        gold = feature_norms.get_feature_vector(word)
-        y.append(gold)
+#         prediction = model.predict(word)
+#         y_hat.append(prediction)
 
 
-        cos = 1- cosine(prediction, gold)
-        cosines.append(cos)
+#         gold = feature_norms.get_feature_vector(word)
+#         y.append(gold)
 
-        corr, p = spearmanr(prediction, gold)
-        correlations.append(corr)
 
-        if (i % 30 ==0) and debug=='info':
-            print(word)
-            print(prediction)
-            print(gold)
-            print("cosine: %f" % cos)
-            #print("precison: %f" % prec)
-            print("correlation: %f" % corr)
+#         cos = 1- cosine(prediction, gold)
+#         cosines.append(cos)
+
+#         corr, p = spearmanr(prediction, gold)
+#         correlations.append(corr)
+
+#         if (i % 30 ==0) and debug=='info':
+#             print(word)
+#             print(prediction)
+#             print(gold)
+#             print("cosine: %f" % cos)
+#             #print("precison: %f" % prec)
+#             print("correlation: %f" % corr)
 
 
 # def print_evaluation(golds: List[int], predictions: List[int]):
