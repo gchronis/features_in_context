@@ -11,10 +11,17 @@ from ray.tune.schedulers import ASHAScheduler
 if __name__ == '__main__':
 
 	models = ['modabs']
+	datasets = ['binder', 'mc_rae_real', 'buchanan']
 	#datasets = ['mc_rae_real'] # THIS IS DONE
 	#datasets = ['buchanan'] # this is NOT done
-	datasets = ['binder']
-	embeddings = ['5k', '1k', 'glove']
+
+	#embeddings = ['bert', 'glove']
+	#clusters = [1]
+
+	embeddings = ['bert']
+	clusters = [5]
+
+
 	mu1s = [1]
 	mu2s = [10e-8, 10e-4,10e-2, 1, 10, 100, 1000]
 	mu3s = [10e-8, 10e-4,10e-2, 1, 10, 100, 1000]
@@ -37,93 +44,47 @@ if __name__ == '__main__':
 	config = {
 			"seed": 42,
 			"layer": 8,
-			"clusters": tune.grid_search([1,5]),
-			"embedding_type": tune.grid_search(['bert', 'glove']),
-			"model": tune.choice(models),
+			"clusters": tune.grid_search(clusters),
+			"embedding_type": tune.grid_search(embeddings),
+			"model": tune.grid_search(models),
 			"train_data": tune.grid_search(datasets),
+
 			"mu1": 1,
 			"mu2": tune.choice(mu2s),
 		    "mu3": tune.choice(mu3s),
 		    "mu4": tune.choice(mu4s), #should grid search
 		    "nnk": tune.choice(nnks), # should grid search
+
 		    'TUNE_ORIG_WORKING_DIR': os.getcwd(),
+		    "k_fold": 10,
+
 
 		    # BS stuff??
 		    "print_dataset": False,
 		    "save_path": None,
 		    "do_dumb_thing": False,
-		    "kfold": False,
 		    "dev_equals_train": False,
 		    "tuning": True,
-		    "allbuthomonyms": False
+		    "allbuthomonyms": False,
+		    "zscore": False
 			}
 
 
-	# run_experiments({
-	#     "my_experiment": {
-	#         "run": "train",
-	#         "resources": { "cpu": 1, "gpu": 0 },
-	#         #"stop": { "mean_accuracy": 100 },
-	#         "config": config,
-	#     },
-	# })
-
-	# run trials for each kind of input embedding, single-prototype BERT, multiprototype BERT, and glove
-	# input_embedding = [
-	# 	('bert', 1),  #1k
-	# 	('bert', 5),  #5k
-	# 	('glove', 1)  # glove
-	# ]
-
-	# for emb in input_embedding:
-
-	# 	# set the parameters for this input embedding
-	# 	config['embedding_type'] = emb[0]
-	# 	config['clusters'] = emb[1]
-
-	# 	analysis = tune.run(
-	# 		classifier_main.main,
-	# 		config=config,
-	# 		scheduler=ASHAScheduler(metric="MAP_at_k", mode="max"),
-	# 		num_samples=100,
-	#     	#name="main_2022-02-11_15-08-47",
-	#     	name="modabs_tuning1",
-	#     	trial_name_creator = tune.function(lambda trial: trial.config['embedding_type'] + str(trial.config['clusters']) + '_' + trial.trial_id),
-	#     	resume="AUTO"
-	# 	)
-
+	run_name = 'modabs_5k_tuning_kfold_10_13_2022'
 	analysis = tune.run(
 		classifier_main.main,
 		config=config,
-		scheduler=ASHAScheduler(metric="MAP_at_k", mode="max"),
+		scheduler=ASHAScheduler(metric="dev_MAP_at_k", mode="max"),
+		#DEBUG
 		num_samples=25,
+		#num_samples=1,
+    	
     	#name="main_2022-02-11_15-08-47",
-    	name="modabs_tuning_binder",
+    	name=run_name,
     	#trial_name_creator = tune.function(lambda trial: trial.config['embedding_type'] + str(trial.config['clusters']) + '_' + trial.trial_id),
-    	resume="AUTO"
+    	#resume="AUTO"
+    	resume = "AUTO"
 	)
 
 	# Obtain a trial dataframe from all run trials of this `tune.run` call.
 	dfs = analysis.trial_dataframes
-
-	# for i in range(0, 25):
-	# 	print(i)
-	# 	command = construct_command(
-	# 		# config
-	# 		seed = 42,
-	# 		layer = 8,
-	# 		clusters = 5,
-	# 		model = 'modabs',
-	# 		dataset = 'mc_rae_real',
-	# 		embedding = random.choice(embeddings),
-	# 		mu1 = 1,
-	# 		mu2 = random.choice(mu2s),
-	# 	    mu3 = random.choice(mu3s),
-	# 	    mu4 = random.choice(mu4s),
-	# 	    nnk = random.choice(nnks)
-	# 		)
-
-	# 	print("running command:")
-	# 	print(command)
-	# 	print(i)
-	# 	os.system(' '.join(command))
