@@ -45,6 +45,7 @@ def _parse_args():
     parser.add_argument('--k_fold', dest='k_fold', type=int, default=False, help='train using k-fold cross validation')
     parser.add_argument('--dev_equals_train', dest='dev_equals_train', default=False, action='store_true', help='use the training words as dev set for debug')
     parser.add_argument('--allbuthomonyms', dest='allbuthomonyms', default=False, action='store_true', help='train on all available words except for homonyms')
+    #parser.add_argument('--allbutall', dest='allbutall', default=False, action='store_true', help='train on all available words')
 
     parser.add_argument('--tuning', default=False, action='store_true', help="writes stats to tuning file; does not save trained model")
     parser.add_argument('--zscore', default=False, action='store_true', help="zscore postprocessing on embeddings")
@@ -135,14 +136,14 @@ def predict_write_output_to_file(exs: List[FeatureNorm], classifier, outfile: st
         f.write("\n")
     f.close()
 
-def prepare_data(feature_norms: FeatureNorms, embeddings: MultiProtoTypeEmbeddings, allbuthomonyms=False):
+def prepare_data(feature_norms: FeatureNorms, embeddings: MultiProtoTypeEmbeddings, args):
     words = list(feature_norms.vocab.keys())
     #### DEBUG #####
     # toy training set
     # words = words[:100]
     ###############
 
-    if allbuthomonyms:
+    if args['allbuthomonyms']:
         ambiguous_pairs = feature_norms.ambiguous_pairs
 
         print("training on all words but evaluation homonyms")
@@ -155,6 +156,12 @@ def prepare_data(feature_norms: FeatureNorms, embeddings: MultiProtoTypeEmbeddin
         test = eval_words
 
         print("Ending up with %s training words" % len(train))
+
+    # elif args['allbutall']:
+    #     train = words
+    #     random.shuffle(train)
+    #     val = train[:-10]
+    #     test = train[:-10]
 
 
     else:
@@ -273,7 +280,7 @@ def train(train_words, dev_words, test_words, embs, feature_norms, args):
 
 def train_1_fold(feature_norms, embs, args):
 
-    train_words, dev_words, test_words = prepare_data(feature_norms, embs, allbuthomonyms=args['allbuthomonyms'])
+    train_words, dev_words, test_words = prepare_data(feature_norms, embs, args)
 
     """
     for debug we might want the dev set to be the trains et just to see if we're learning those
@@ -293,14 +300,15 @@ def train_1_fold(feature_norms, embs, args):
     print("=======DEV SET=======")
     # return (top_10_prec, top_20_prec, top_k_prec, average_correlation, average_cosine)
     results = evaluate(model, dev_words, feature_norms, args, debug='false')
+    print(results)
     tune.report(
-        dev_MAP_at_10=results.MAP_at_10,
-        dev_MAP_at_20=results.MAP_at_20,
-        dev_MAP_at_k=results.MAP_at_k,
-        dev_correl=results.correl,
-        dev_cos=results.cos,
-        dev_rsquare=results.rsquare,
-        dev_mse=results.mse
+        dev_MAP_at_10=results['MAP_at_10'],
+        dev_MAP_at_20=results['MAP_at_20'],
+        dev_MAP_at_k=results['MAP_at_k'],
+        dev_correl=results['correl'],
+        dev_cos=results['cos'],
+        dev_rsquare=results['rsquare'],
+        dev_mse=results['mse']
     )
 
     print("=======FINAL PRINTING ON TEST SET=======")
@@ -308,15 +316,15 @@ def train_1_fold(feature_norms, embs, args):
     print("testing on these words:")
     for test_word in test_words:
         print(test_word)
-    MAP_at_10, MAP_at_20, MAP_at_k, correl, cos, rsquare, mse = evaluate(model, test_words, feature_norms, args, debug='false')
+    results = evaluate(model, test_words, feature_norms, args, debug='false')
     tune.report(
-        MAP_at_10=results.MAP_at_10,
-        MAP_at_20=results.MAP_at_20,
-        MAP_at_k=results.MAP_at_k,
-        correl=results.correl,
-        cos=results.cos,
-        rsquare=results.rsquare,
-        mse=results.mse
+        test_MAP_at_10=results['MAP_at_10'],
+        test_MAP_at_20=results['MAP_at_20'],
+        test_MAP_at_k=results['MAP_at_k'],
+        test_correl=results['correl'],
+        test_cos=results['cos'],
+        test_rsquare=results['rsquare'],
+        test_mse=results['mse']
     )
 
     if (args['save_path'] is not None):
@@ -374,9 +382,9 @@ def kfold_crossvalidation(feature_norms, embs, args):
         dev_stats.append(results)
 
         # if we are doing final eval get test set results
-        if not args['tuning']:
-            results = evaluate(model, test_words, feature_norms, args, debug='false')
-            test_stats.append(results)
+        #if not args['tuning']:
+        results = evaluate(model, test_words, feature_norms, args, debug='false')
+        test_stats.append(results)
 
 
     print("=======DEV SET=======")
@@ -395,20 +403,20 @@ def kfold_crossvalidation(feature_norms, embs, args):
     print(average)
 
     # if we are doing final eval get test set results
-    if not args['tuning']:
-        print("=======FINAL PRINTING ON TEST SET=======")
-        all_folds = pd.DataFrame.from_records(test_stats)
-        average = all_folds.mean(axis=0)
-        tune.report(
-            MAP_at_10=average.MAP_at_10,
-            MAP_at_20=average.MAP_at_20,
-            MAP_at_k=average.MAP_at_k,
-            correl=average.correl,
-            cos=average.cos,
-            rsquare=average.rsquare,
-            mse=average.mse
-        )
-        print(average)
+    #if not args['tuning']:
+    print("=======FINAL PRINTING ON TEST SET=======")
+    all_folds = pd.DataFrame.from_records(test_stats)
+    average = all_folds.mean(axis=0)
+    tune.report(
+        test_MAP_at_10=average.MAP_at_10,
+        test_MAP_at_20=average.MAP_at_20,
+        test_MAP_at_k=average.MAP_at_k,
+        test_correl=average.correl,
+        test_cos=average.cos,
+        test_rsquare=average.rsquare,
+        test_mse=average.mse
+    )
+    print(average)
 
 
 def main(args):
