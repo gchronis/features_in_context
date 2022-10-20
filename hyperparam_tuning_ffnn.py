@@ -10,18 +10,20 @@ from ray.tune.schedulers import ASHAScheduler
 if __name__ == '__main__':
 
 	models = ['ffnn']
-	datasets = ['mc_rae_real', 'buchanan', 'binder']
-	#datasets = ['binder']
+	#datasets = ['mc_rae_real', 'buchanan', 'binder']
+	#datasets = ['mc_rae_real', 'binder']
+	datasets = ['binder']
 
 	# uncomment do 1k and glove
-	clusters = [1]
-	embedding_type = ['bert', 'glove']
+	# clusters = [1]
+	# embedding_type = ['bert', 'glove']
 
 	# uncomment to do 5k; avoids repeating glove trials
-	#clusters = [5]
-	#embedding_type = ['bert']
+	clusters = [5]
+	embedding_type = ['bert']
 
-	epochs = [30, 50]
+	#epochs = [30, 50]
+	epochs = [50]
 	dropouts = [0.5, 0.2, 0.0]
 	learning_rates = [1e-5, 1e-4, 1e-3]
 	hidden_sizes = [50, 100, 300]
@@ -44,7 +46,7 @@ if __name__ == '__main__':
 			"batch_size": 1,
 
 		    'TUNE_ORIG_WORKING_DIR': os.getcwd(),
-		    "kfold": 10,
+		    "k_fold": 10,
 
 
 		    # BS stuff??
@@ -53,7 +55,7 @@ if __name__ == '__main__':
 		    "do_dumb_thing": False,
 		    "dev_equals_train": False,
 		    "tuning": True,
-		    "allbuthomonyms": False
+		    "allbuthomonyms": False,
 		    "zscore": False
 
 			}
@@ -64,10 +66,14 @@ if __name__ == '__main__':
 		config=config,
 		scheduler=ASHAScheduler(metric="dev_MAP_at_k", mode="max"),
 		num_samples=25,
-    	#name="main_2022-02-11_15-08-47",
-    	name="ffnn_1k_tuning_kfold_10_13_2022",
+
+   		# i have 16 cpus, use this to limit the number used. allocates 4 per trial, stops crashing my laptop.
+		# uncomment or decrease to use more firepower
+		#resources_per_trial={'cpu': 4},
+
+    	name="binder_ffnn_5k_tuning_kfold_10_14_2022",
     	#trial_name_creator = tune.function(lambda trial: trial.config['embedding_type'] + str(trial.config['clusters']) + '_' + trial.trial_id),
-    	#resume="AUTO"
+    	#esume="AUTO"
     	resume = False
 	)
 

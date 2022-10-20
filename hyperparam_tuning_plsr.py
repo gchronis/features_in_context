@@ -58,7 +58,6 @@ if __name__ == '__main__':
 		# DEBUG
 		#num_samples=25,
 		#num_samples = 4,
-    	#name="main_2022-02-11_15-08-47",
     	name=run_name,
     	#trial_name_creator = tune.function(lambda trial: trial.config['embedding_type'] + str(trial.config['clusters']) + '_' + trial.trial_id),
     	#resume="AUTO"

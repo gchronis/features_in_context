@@ -5,19 +5,24 @@ import subprocess, os
 import random
 import torch.optim as optim
 from ray import tune
+import ray
 import classifier_main
 from ray.tune.schedulers import ASHAScheduler
 
 if __name__ == '__main__':
 
 	models = ['modabs']
-	datasets = ['binder', 'mc_rae_real', 'buchanan']
-	#datasets = ['mc_rae_real'] # THIS IS DONE
-	#datasets = ['buchanan'] # this is NOT done
+	#datasets = ['binder', 'mc_rae_real', 'buchanan']
+	datasets = ['buchanan']
 
+	# 10/13 we have done 1k and glove on all datasets
+	# need to do 5k on all datasets
+
+	# uncomment for 1k and glove
 	#embeddings = ['bert', 'glove']
 	#clusters = [1]
 
+	# uncomment for 5k
 	embeddings = ['bert']
 	clusters = [5]
 
@@ -69,12 +74,24 @@ if __name__ == '__main__':
 		    "zscore": False
 			}
 
+	# limit to 8g ram usage
+	#ray.init(object_store_memory=((8*10)**9))
 
-	run_name = 'modabs_5k_tuning_kfold_10_13_2022'
+	#classifier_main_with_resources = tune.with_resources(classifier_main.main, {"cpu": 2})
+
+	run_name = 'modabs_5k_buchanan_tuning_kfold_10_15_2022'
 	analysis = tune.run(
 		classifier_main.main,
 		config=config,
+		# uncomment for training mcrae and buchanan
 		scheduler=ASHAScheduler(metric="dev_MAP_at_k", mode="max"),
+		# uncomment for training binder where we are interested in rsquare
+		#scheduler=ASHAScheduler(metric="dev_rsquare", mode="max"),
+
+		# i have 16 cpus, use this to limit the number used. allocates 4 per trial, stops crashing my laptop.
+		# uncomment or decrease to use more firepower
+		#resources_per_trial={'cpu': 3},
+
 		#DEBUG
 		num_samples=25,
 		#num_samples=1,
@@ -83,7 +100,7 @@ if __name__ == '__main__':
     	name=run_name,
     	#trial_name_creator = tune.function(lambda trial: trial.config['embedding_type'] + str(trial.config['clusters']) + '_' + trial.trial_id),
     	#resume="AUTO"
-    	resume = "AUTO"
+    	resume = False
 	)
 
 	# Obtain a trial dataframe from all run trials of this `tune.run` call.
