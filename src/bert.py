@@ -7,12 +7,7 @@ from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM
 import logging
 logging.basicConfig(level=logging.INFO)
 
-import matplotlib.pyplot as plt
-#% matplotlib inline
 import numpy as np
-
-from sklearn.cluster import KMeans
-from scipy.spatial.distance import cosine
 
 class BERTBase():
 
