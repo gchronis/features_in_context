@@ -74,9 +74,9 @@ FFNN
 | --lr=1e-4 	| learning rate |
 | --hidden_size=300 | number of weights for hidden layers |
 
-Label Propagation
-| --mu1=1 | |
-| --mu2=0.1 | |
-| --mu3=1e-07 | |
-| --mu4=5 | |
-| --nnk=3 | |
+Label Propagation 
+| --mu1=1 | - |
+| --mu2=0.1 | - |
+| --mu3=1e-07 | - |
+| --mu4=5 | - |
+| --nnk=3 | - |
