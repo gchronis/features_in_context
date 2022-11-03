@@ -60,6 +60,7 @@ or
 | --- | --- |
 | --k-fold=n  | Do k-fold crossvalidation with n folds. reports average metrics over all folds |
 | --allbuthomonyms | trains on all words in the test set except for  |
+| --save_path=str | str is a path to save the trained file to; defaults to not saving; should save to `./trained_models` |
 
 
 ### Model-specific arguments
