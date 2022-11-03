@@ -174,7 +174,7 @@ class BinderFeatureNorms(FeatureNorms):
     def __init__(self, infile, subset=None):
         super().__init__(None)
 
-        df = pd.read_csv('/Users/gabriellachronis/data/binder_word_ratings/WordSet1_Ratings.csv')
+        df = pd.read_csv('./data/external/binder_word_ratings/WordSet1_Ratings.csv')
         df = df.set_index("Word")
         features_to_exclude = ['No', 'N', 'Mean R', 'WC', 'LEN', 'FREQ', 'L10 FREQ', 'Orth', 'Orth_F', 'N1_F', 'N2_F', 'N3_F', 'IMG', 'Unnamed: 70', 'Unnamed: 80' ]
         df = df.drop(columns = features_to_exclude)
