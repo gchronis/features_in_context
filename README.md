@@ -47,34 +47,39 @@ or
 
 
 ### Non-optional arguments
-```
-
+| argument | explanation |
+| --- | --- |
 | --train_data=x     | x can be mc_rae_real, buchanan, binder (also implemented mcrae, which uses lemmatized normalized buchanan version of mcrae norms) |
 | --model=x          | `plsr` or `ffnn` or `modabs` (a.k.a. label propagation) |
 | --embedding_type=x | `glove` or `bert` |
 | --layer=x          | layer of bert embedding to use (we have embeddings for layer 8 and 11 atm, but can make more) |
 | --clusters=x       | number of clusters in multiprototype embeddings (1 or 5; if using glove, this is always 1) |
-```
 
 ### Other options
-```
+| argument | explanation |
+| --- | --- |
 | --k-fold=n  | Do k-fold crossvalidation with n folds. reports average metrics over all folds |
 | --allbuthomonyms | trains on all words in the test set except for  |
-```
+
 
 ### Model-specific arguments
-
 PLSR
+| argument | explanation |
+| --- | --- |
 | --plsr_n_components=x | |
 | --plsr_max_iter=x | |
 
 FFNN
+| argument | explanation |
+| --- | --- |
 | --epochs=n |  integer number of training epochs |
 | --dropout=n  | dropout (float between 0 and 1, e.g. 0.2) | 
 | --lr=1e-4 	| learning rate |
 | --hidden_size=300 | number of weights for hidden layers |
 
 Label Propagation 
+| argument | explanation |
+| --- | --- |
 | --mu1=1 | - |
 | --mu2=0.1 | - |
 | --mu3=1e-07 | - |
