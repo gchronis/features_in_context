@@ -14,34 +14,6 @@ class FeatureNorms:
     Indexed list of feature norm objects
     """
     def __init__(self, cue_feature_pairs, normalized=True):
-        # feature_map = Indexer()
-        # words = Counter()
-
-        # norms = {}
-
-        # for pair in cue_feature_pairs:
-        #     word = pair.cue
-        #     words[word] += 1
-
-        #     if normalized == True:
-        #         feature = pair.translated
-        #         # i think before we were using the untranslated value rather than the translated value...what does this mean? will we see improvement if we retrain?
-        #         value = pair.normalized_translated
-        #     else:
-        #         feature = pair.feature
-        #         value = pair.normalized_feature
-
-        #     feature_index = feature_map.add_and_get_index(feature)
-
-        #     if word in norms:
-        #         norms[word][feature_index] = value
-        #     else:
-        #         norms[word] = {feature_index: value}
-
-        # self.feature_map = feature_map
-        # self.feature_norms = norms
-        # self.length = len(feature_map)
-        # self.vocab = words
         None
 
     def get_features(self, word):
@@ -470,61 +442,10 @@ def unique_words(exs):
     return unique_words
 
 if __name__=="__main__":
-    # relativize_sentiment_data()
-    # exit()
-    import sys
-    # embs = read_word_embeddings("data/glove.6B.50d-relativized.txt")
-    # query_word_1 = sys.argv[1]
-    # query_word_2 = sys.argv[2]
-    # if embs.word_indexer.index_of(query_word_1) == -1:
-    #     print("%s is not in the indexer" % query_word_1)
-    # elif embs.word_indexer.index_of(query_word_2) == -1:
-    #     print("%s is not in the indexer" % query_word_2)
-    # else:
-    #     emb1 = embs.get_embedding(query_word_1)
-    #     emb2 = embs.get_embedding(query_word_2)
-    #     print("cosine similarity of %s and %s: %f" % (query_word_1, query_word_2, np.dot(emb1, emb2)/np.sqrt(np.dot(emb1, emb1) * np.dot(emb2, emb2))))
-
-    # exs = read_similarity_examples('data/buchanan/double_words.csv')
-    # print("first ten similarity examples")
-    # [ print(ex) for ex in exs[:10] ]
-    # print()
-
-    # exs = read_buchanan_cue_feature_examples('data/buchanan/cue_feature_words.csv')
-    # uw = unique_words(exs)
-    # print(uw)
-    # print("%s unique words in cue feature data" % len(uw))
-
-    # exs = read_mcrae_cue_feature_examples('data/mcrae/CONCS_FEATS_concstats_brm/concepts_features-Table1.csv')
-    # uw = unique_words(exs)
-    # print(uw)
-    # print("%s unique words in cue feature data" % len(uw))
-
-
-    # df = pd.read_csv('/Users/gabriellachronis/data/binder_word_ratings/WordSet1_Ratings.csv')
-
-    # print(df.head(5))
-
-    # df = df.set_index("Word")
-
-    # print(df.head(5))
-
-    # df = df.drop(columns = ["No", "N", "Mean R"])
-
-    # print(df.head(5))
-
-    # norms = BinderFeatureNorms('/Users/gabriellachronis/data/binder_word_ratings/WordSet1_Ratings.csv')
-    # print(norms.print_features('hand'))
-
     norms = McRaeFeatureNorms('data/mcrae/CONCS_FEATS_concstats_brm/concepts_features-Table1.csv')
 
     print(norms.feature_norms.keys())
 
     print(norms.feature_norms['bat_(animal)'])
     print(norms.feature_norms['bat_animal'])
-
-    #print(norms.feature_norms)
-
-    raise Exception("deklw")
-
 
