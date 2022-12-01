@@ -1,9 +1,6 @@
 # models.py
-
-import time
 import numpy as np
 from src.utils import *
-from collections import Counter
 from src.multiprototype import *
 from src.feature_data import *
 import torch.nn as nn
@@ -14,8 +11,6 @@ from scipy.spatial.distance import cosine
 from scipy.stats import spearmanr
 from sklearn.metrics import r2_score 
 from sklearn.metrics import mean_squared_error
-
-
 
 
 from typing import List
@@ -36,14 +31,11 @@ def add_models_args(parser):
     # 50-200 might be a good range to start with for embedding and LSTM sizes
     #parser.add_argument('--embedding_size', type=int, default=50, help='size of embedding to train')
     #parser.add_argument('--pretrained', type=bool, default=True, help='Boolean indicating whether to start with pretrained vectors')
-
     """
     PLSR args
     """
-
     parser.add_argument('--plsr_n_components', type=int, default=None, help='number of dimensionality reduction components to keep')
     parser.add_argument('--plsr_max_iter', type=int, default=None, help='The maximum number of iterations of the power method when algorithm=nipals. Ignored otherwise.')
-
 
     """
     ModAbs args
@@ -53,12 +45,6 @@ def add_models_args(parser):
     parser.add_argument('--mu3', type=float, default=None, help='mu_abdn (Talukdar and Kramer 2009)')
     parser.add_argument('--mu4', type=float, default=None, help='ModAds NNk (Rosenfeld and Erk 2019)')
     parser.add_argument('--nnk', type=int, default=None, help='ModAds equal/decay n (Rosenfeld and Erk 2019')
-
-
-
-
-
-
 
 
 class FeatureClassifier(object):
@@ -87,12 +73,6 @@ class FeatureClassifier(object):
         # you need to choose somehow which embedding or which predicted features to select
         # for the time being, lets take the max of the values predicted for each feature
         # however this seems really wrong.
-
-        #print(logits[:, :10])
-
-        #agg = np.average(logits, axis = 0)
-        #print(agg)
-        #raise Exception("STOP thief!")
         return logits
 
     def predict_from_single_context_vector(self, word, vec):
@@ -108,7 +88,6 @@ class FeatureClassifier(object):
             logits = vec
         else:
             logits = self.predict(word)
-        #logits = logits.detach().numpy()
     
         # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
         # Newer NumPy versions (1.8 and up) have a function called argpartition for this. To get the indices of the four largest elements, do
@@ -118,8 +97,6 @@ class FeatureClassifier(object):
         for i in ind:
             feat = self.feature_norms.feature_map.get_object(i)
             feats.append(feat)
-
-        #print(feats)
         return feats
 
     def predict_top_n_features_from_single_context_vector(self, word: str, n: int, input_vec, output_vec=None):
@@ -131,7 +108,6 @@ class FeatureClassifier(object):
             logits = output_vec
         else:
             word, logits = self.predict_from_single_context_vector(word, input_vec)
-        #logits = logits.detach().numpy()
     
         # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
         # Newer NumPy versions (1.8 and up) have a function called argpartition for this. To get the indices of the four largest elements, do
@@ -153,7 +129,6 @@ class FeatureClassifier(object):
         vec = bert.get_bert_vectors_for(word, sentence)
         # get the layer we care about
         vec = vec[8]
-        #print(vec.shape)
 
         # put it ias the only prototype in a bag
         vec = np.array([vec])
@@ -174,7 +149,6 @@ class FeatureClassifier(object):
             logits = vec
         else:
             logits = self.predict_in_context(word, sentence, bert, glove=glove)
-            #logits = logits.detach().numpy()
     
         # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
         # Newer NumPy versions (1.8 and up) have a function called argpartition for this. To get the indices of the four largest elements, do
@@ -184,8 +158,6 @@ class FeatureClassifier(object):
         for i in ind:
             feat = self.feature_norms.feature_map.get_object(i)
             feats.append(feat)
-
-        #print(feats)
         return feats
 
 class FrequencyClassifier(FeatureClassifier):
@@ -223,9 +195,6 @@ class FrequencyClassifier(FeatureClassifier):
 
 
 class BinaryClassifier(object):
-#     """
-#     Classifier to classify predict a distribution over features for a bert word-type embedding
-#     """
 
     def __init__(self, nn, vectors, feature_norms):
         self.nn = nn
@@ -244,15 +213,13 @@ class BinaryClassifier(object):
         logits = self.nn.forward(x)
         logits = logits.detach().numpy()
 
-        # TODO BATCHIFY
         logits = [1 if sigmoid(logit) > 0.5 else 0 for logit in logits]
 
         return logits
 
     def predict_top_n_features(self, word: str, n: int):
         logits = self.predict(word)
-        #logits = logits.detach().numpy()
-    
+            
         # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
         # Newer NumPy versions (1.8 and up) have a function called argpartition for this. To get the indices of the four largest elements, do
         ind = np.argpartition(logits, -n)[-n:]
@@ -262,7 +229,6 @@ class BinaryClassifier(object):
             feat = self.feature_norms.feature_map.get_object(i)
             feats.append(feat)
 
-        #print(feats)
         return feats
 
 
@@ -360,22 +326,15 @@ class FFNN(nn.Module):
         super(FFNN, self).__init__()
         self.V = nn.Linear(inp, hid)
         self.g = nn.Tanh()
-        #self.g = nn.ReLU()
         self.W = nn.Linear(hid, out)
         # Initialize weights according to a formula due to Xavier Glorot.
-        #nn.init.xavier_uniform_(self.V.weight)
-        #nn.init.xavier_uniform_(self.W.weight)
         self.dropout = nn.Dropout(p=dropout)
 
         # Initialize with zeros instead
         nn.init.zeros_(self.V.weight)
         nn.init.zeros_(self.W.weight)
-
-
-        #self.attn = Attention('dot', hid)
         
         self.attn = AttentionSoftMax(inp , out_features = None)
-        #self.attn = Attention('general', inp)
 
 
         self.layers = nn.Sequential(
@@ -390,13 +349,6 @@ class FFNN(nn.Module):
         )
 
 
-        # self.attention = nn.Sequential(
-        #     nn.Linear(inp, hid),
-        #     nn.Tanh(),
-        #     nn.Linear(hid, out)
-        # )
-
-
     def forward(self, x):
         """
         Runs the neural network on the given data and returns log probabilities of the various classes.
@@ -405,29 +357,10 @@ class FFNN(nn.Module):
         :return: an [out]-sized tensor of log probabilities. (In general your network can be set up to return either log
         probabilities or a tuple of (loss, log probability) if you want to pass in y to this function as well
         """
-        #return self.log_softmax(self.W(self.g(self.V(x))))
-
-
-        # |x| = N X K
-        #print(x.size())
         weighted_avg, A = self.attn(x)  # NxK
-        #print("attention energies: ", A.size())
-        #print("attention output: ", weighted_avg.size())
-
-        #raise Exception("djwfhel")
-
-
-        #A = torch.transpose(A, 1, 0)  # KxN
-        #A = F.softmax(A, dim=1)  # softmax over N
-
-        #M = torch.mm(A, x)  # KxL
-
-        # comment out in favor of our 4 layer MLP
         return self.dropout(self.W(self.g(self.V(weighted_avg))))
-        #return self.layers(weighted_avg)
 
 def dot_score(self, hidden, encoder_output):
-    #energy = self.attn(encoder_output)
     return torch.sum(hidden * encoder_output, dim=2)
 
 
@@ -436,16 +369,7 @@ def form_input(word: str, embs: MultiProtoTypeEmbeddings):
     returns the numpy BERT vector for that word
     """
     vec = embs.get_embedding(word)
-
-    """
-    TODO implement bag. for now just average things together
-    """
-    #vec = np.average(vec, axis=0)
-
-
-    vec =  torch.from_numpy(vec).float()
-
-    return vec
+    return torch.from_numpy(vec).float()
 
 
 def form_output(word: str, norms: FeatureNorms, binary=False):
@@ -453,8 +377,6 @@ def form_output(word: str, norms: FeatureNorms, binary=False):
     returns a NON-SPARSE numpy vector representing the buchanan feature norms for this word.
     """
     norm = norms.get_feature_vector(word)
-    #norm = norm.unsqueeze(0) # add dummy batch dimension
-    #print(norm)
     if binary == True:
         norm = [1 if val > 0 else 0 for val in norm]
     norm = torch.FloatTensor(norm)
@@ -463,7 +385,6 @@ def form_output(word: str, norms: FeatureNorms, binary=False):
 
 def train_ffnn(train_exs: List[str], dev_exs: List[str], multipro_embs: MultiProtoTypeEmbeddings, feature_norms: FeatureNorms, args) -> FeatureClassifier:
     num_epochs = args['epochs']
-    batch_size = args['batch_size']
     initial_learning_rate = args['lr']
     hidden_size = args['hidden_size']
     multipro_vec_size = multipro_embs.dim
@@ -472,13 +393,8 @@ def train_ffnn(train_exs: List[str], dev_exs: List[str], multipro_embs: MultiPro
     dropout = args['dropout']
 
     ffnn = FFNN(multipro_vec_size, hidden_size, num_classes, num_bags, dropout)
-
-    #train_xs = [sentence_vector(ex.words, self.word_vectors) for ex in train_exs]
-    #train_ys = [ex.label for ex in train_exs]
-
     optimizer = optim.Adam(ffnn.parameters(), lr=initial_learning_rate)
-    #multi_criterion = nn.MultiLabelSoftMarginLoss(weight=None, reduction='none')
-    # TODO bce = nn.BCE
+    
     mse = nn.MSELoss(reduction='none')
 
     for epoch in range(0, num_epochs):
@@ -497,30 +413,9 @@ def train_ffnn(train_exs: List[str], dev_exs: List[str], multipro_embs: MultiPro
             # Zero out the gradients from the FFNN object. *THIS IS VERY IMPORTANT TO DO BEFORE CALLING BACKWARD()*
             ffnn.zero_grad()
 
-            # x is a tensor [1 , k, N] where k is the number of clusters. one embedding for each cluster. we want to 
-            #print(x.size())
-            #print(x[:,:10])
-
-            #bag_losses = torch.empty(num_bags)
-            # for i in range(0,multipro_embs.num_prototypes):
-            #     instance = x[i,:]
-            #     #print(instance.size())
-            #     #print(instance[:10])
-
-            #     log_probs = ffnn.forward(instance)
-            #     instance_loss = mse(log_probs.unsqueeze(0), y.unsqueeze(0)).sum() # add dummy batch dimension
-            #     bag_losses[i] = instance_loss
-            #print(bag_losses)
-            #loss = torch.min(bag_losses)
 
             log_probs = ffnn.forward(x)
             loss = mse(log_probs.unsqueeze(0), y.unsqueeze(0)).sum()
-
-            #print(loss)
-            #raise Exception("help multi")
-
-            #print(loss)
-            #print(loss.shape)
             total_loss += loss
 
             # Computes the gradient and takes the optimizer step
@@ -538,74 +433,6 @@ def train_ffnn(train_exs: List[str], dev_exs: List[str], multipro_embs: MultiPro
 
     return model
 
-
-# def train_glove_regressor(train_exs: List[str], dev_exs: List[str], feature_norms: FeatureNorms, args) -> FeatureClassifier:
-
-
-
-#     # not actually multiprototype embeddings but that's the form we need it in
-#     model = train_regressor(train_exs, dev_exs, multipro_embs, feature_norms, args)
-#     return model
-
-
-def train_binary_classifier(train_exs: List[str], dev_exs: List[str], multipro_embs: MultiProtoTypeEmbeddings, feature_norms: FeatureNorms, args) -> BinaryClassifier:
-    num_epochs = args.epochs
-    batch_size = args.batch_size
-    initial_learning_rate = args.lr
-    hidden_size = args.hidden_size
-    multipro_vec_size = multipro_embs.dim
-    num_classes = feature_norms.length
-
-    ffnn = FFNN(multipro_vec_size, hidden_size, num_classes)
-
-    #train_xs = [sentence_vector(ex.words, self.word_vectors) for ex in train_exs]
-    #train_ys = [ex.label for ex in train_exs]
-
-    optimizer = optim.Adam(ffnn.parameters(), lr=initial_learning_rate)
-    #multi_criterion = nn.MultiLabelSoftMarginLoss(weight=None, reduction='none')
-    # TODO bce = nn.BCE
-    bce = nn.BCEWithLogitsLoss(reduction='none')
-
-    for epoch in range(0, num_epochs):
-        
-        ex_indices = [i for i in range(0, len(train_exs))]
-        random.shuffle(ex_indices)
-        total_loss = 0.0
-        for idx in ex_indices:
-            x = form_input(train_exs[idx], multipro_embs)
-            y = form_output(train_exs[idx], feature_norms, binary=True)
-            # Build one-hot representation of y. Instead of the label 0 or 1, y_onehot is either [0, 1] or [1, 0]. This
-            # way we can take the dot product directly with a probability vector to get class probabilities.
-            #y_onehot = torch.zeros(self.ffnn.num_classes)
-            # scatter will write the value of 1 into the position of y_onehot given by y
-            #y_onehot.scatter_(0, torch.from_numpy(np.asarray(y,dtype=np.int64)), 1)
-            # Zero out the gradients from the FFNN object. *THIS IS VERY IMPORTANT TO DO BEFORE CALLING BACKWARD()*
-            ffnn.zero_grad()
-            log_probs = ffnn.forward(x)
-
-            # Can also use built-in NLLLoss as a shortcut here but we're being explicit here
-            #loss = torch.neg(log_probs).dot(y)
-            loss = bce(log_probs.unsqueeze(0), y.unsqueeze(0)).sum() # add dummy batch dimension
-            #print(loss)
-            #print(loss.shape)
-            total_loss += loss
-
-            # Computes the gradient and takes the optimizer step
-            loss.backward()
-            optimizer.step()
-        print("\nTotal loss on epoch %s: %f" % (epoch, total_loss))
-        
-        model = BinaryClassifier(ffnn, multipro_embs, feature_norms)
-        model.ffnn.eval()
-        print("=======TRAIN SET=======")
-        evaluate_binary(model, train_exs, feature_norms, args, debug='false')
-        print("=======DEV SET=======")
-        evaluate_binary(model, dev_exs, feature_norms, args, debug='info')
-
-
-
-    return model
-
 def evaluate(model, dev_exs, feature_norms, args, debug='false'):
     y_hat = []
     y = []
@@ -615,9 +442,6 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
     top_k_precs = []
     correlations = []
     mses = []
-
-    num_top_10 = 0
-    num_top_20 = 0
     num_total = 0
 
     # we're calling this in the particular model trainer now bc this is now a more general function for more than ffnns
@@ -630,16 +454,9 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
         prediction = model.predict(word)
         y_hat.append(prediction)
 
-        #### truncated feature vec for debugging purposes!!!!!
-        #gold = feature_norms.get_feature_vector(word)[:10]
         gold = feature_norms.get_feature_vector(word)
-        #### truncated feature vec for debugging purposes!!!!!
-        #gold_feats = feature_norms.get_features(word)[:10]
         gold_feats = feature_norms.get_features(word)
         y.append(gold)
-
-        #print(prediction)
-        #print(gold)
         cos = 1 - cosine(prediction, gold)
         cosines.append(cos)
 
@@ -695,20 +512,14 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
 
     R_square = r2_score(y, y_hat)
 
-
-    #print(len(y))
-    #print(len(y_hat))
-
     print("Average cosine between gold and predicted feature norms: %s" % average_cosine)
     print("average Percentage (%) of gold gold-standard features retrieved in the top 10 features of the predicted vector: ", top_10_prec)
     print("average Percentage (%) of gold gold-standard features retrieved in the top 20 features of the predicted vector: ", top_20_prec)
     print("Average % @k (derby metric)", top_k_prec)
-    #print("Percentage (%) of test items that retrieve their gold-standard vector in the top 10 neighbours of their predicted vector: %f" % top_20_acc)
     print("correlation between gold and predicted vectors: %s " % average_correlation)
     print('Coefficient of Determination', R_square)
     print("MSE: %f" % mse )
 
-    #raise Exception("what are we doingggg")
 
     results =  {
         "MAP_at_10": top_10_prec, 
@@ -719,78 +530,3 @@ def evaluate(model, dev_exs, feature_norms, args, debug='false'):
         "rsquare": R_square, 
         "mse": mse }
     return results
-
-# def evaluate_binary(model, dev_exs, feature_norms, args, debug='false'):
-
-#     y_hat = []
-#     y = []
-#     cosines = []
-#     precs = []
-#     correlations = []
-
-#     for i in range(0,len(dev_exs)):
-#         word = dev_exs[i]
-
-#         prediction = model.predict(word)
-#         y_hat.append(prediction)
-
-
-#         gold = feature_norms.get_feature_vector(word)
-#         y.append(gold)
-
-
-#         cos = 1- cosine(prediction, gold)
-#         cosines.append(cos)
-
-#         corr, p = spearmanr(prediction, gold)
-#         correlations.append(corr)
-
-#         if (i % 30 ==0) and debug=='info':
-#             print(word)
-#             print(prediction)
-#             print(gold)
-#             print("cosine: %f" % cos)
-#             #print("precison: %f" % prec)
-#             print("correlation: %f" % corr)
-
-
-# def print_evaluation(golds: List[int], predictions: List[int]):
-#     """
-#     Prints evaluation statistics comparing golds and predictions, each of which is a sequence of 0/1 labels.
-#     Prints accuracy as well as precision/recall/F1 of the positive class, which can sometimes be informative if either
-#     the golds or predictions are highly biased.
-
-#     :param golds: gold labels
-#     :param predictions: pred labels
-#     :return:
-#     """
-#     num_correct = 0
-#     num_pos_correct = 0
-#     num_pred = 0
-#     num_gold = 0
-#     num_total = 0
-#     if len(golds) != len(predictions):
-#         raise Exception("Mismatched gold/pred lengths: %i / %i" % (len(golds), len(predictions)))
-#     for idx in range(0, len(golds)):
-#         gold = golds[idx]
-#         prediction = predictions[idx]
-#         if prediction == gold:
-#             num_correct += 1
-#         if prediction == 1:
-#             num_pred += 1
-#         if gold == 1:
-#             num_gold += 1
-#         if prediction == 1 and gold == 1:
-#             num_pos_correct += 1
-#         num_total += 1
-#     acc = float(num_correct) / num_total
-#     output_str = "Accuracy: %i / %i = %f" % (num_correct, num_total, acc)
-#     prec = float(num_pos_correct) / num_pred if num_pred > 0 else 0.0
-#     rec = float(num_pos_correct) / num_gold if num_gold > 0 else 0.0
-#     f1 = 2 * prec * rec / (prec + rec) if prec > 0 and rec > 0 else 0.0
-#     output_str += ";\nPrecision (fraction of predicted positives that are correct): %i / %i = %f" % (num_pos_correct, num_pred, prec)
-#     output_str += ";\nRecall (fraction of true positives predicted correctly): %i / %i = %f" % (num_pos_correct, num_gold, rec)
-#     output_str += ";\nF1 (harmonic mean of precision and recall): %f;\n" % f1
-#     print(output_str)
-#     return acc, f1, output_str
-
