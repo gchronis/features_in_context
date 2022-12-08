@@ -132,7 +132,7 @@ class FeatureClassifier(object):
         logits = self.nn.forward(x)
         return logits.detach().numpy()
 
-    def predict_top_n_features_in_context(self, word, sentence, bert=None,
+    def predict_top_n_features_in_context(self, word, sentence, n=-1, bert=None,
                                           word_occurrence=0, layer=8, glove=False):
         """
         :vec: optional arg if we already have the predicted feature vector
@@ -141,7 +141,9 @@ class FeatureClassifier(object):
         feats = [self.feature_norms.feature_map.get_object(i) for i in range(len(self.feature_norms.feature_map))]
         df = pd.DataFrame({"Features":list(feats),
              "Values":logits,}).sort_values("Values", ascending=False)
-        return df
+        # for now return bare list of features to maintain compatibility with eval code
+        # TODO update eval code to use a dataframe of the above shape
+        return df.head(n)["Features"]
 
 class FrequencyClassifier(FeatureClassifier):
     """
