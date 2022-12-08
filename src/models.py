@@ -73,6 +73,52 @@ class FeatureClassifier(object):
         # however this seems really wrong.
         return logits
 
+    def predict_from_single_context_vector(self, word, vec):
+        # code from form_input bc we already have embedding
+        x =  torch.from_numpy(vec).float()
+        logits = self.nn.forward(x)
+        logits = logits.detach().numpy()
+        return (word, logits)
+
+    def predict_top_n_features(self, word: str, n: int, vec=None):
+
+        if vec is not None:
+            logits = vec
+        else:
+            logits = self.predict(word)
+
+        # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
+        # Newer NumPy versions (1.8 and up) have a function called argpartition for this. To get the indices of the four largest elements, do
+        ind = np.argpartition(logits, -n)[-n:]
+
+        feats = []
+        for i in ind:
+            feat = self.feature_norms.feature_map.get_object(i)
+            feats.append(feat)
+        return feats
+
+    def predict_top_n_features_from_single_context_vector(self, word: str, n: int, input_vec, output_vec=None):
+        """
+        use this when we already have one context vector and we want to get semantic features for it. 
+        for use with multi-prototype centroids, when the target vector is an aggregate of several context vectors already
+        """
+        if output_vec is not None:
+            logits = output_vec
+        else:
+            word, logits = self.predict_from_single_context_vector(word, input_vec)
+
+        # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
+        # Newer NumPy versions (1.8 and up) have a function called argpartition for this. To get the indices of the four largest elements, do
+        ind = np.argpartition(logits, -n)[-n:]
+
+        feats = []
+        for i in ind:
+            feat = self.feature_norms.feature_map.get_object(i)
+            feats.append(feat)
+
+        #print(feats)
+        return (word, feats)
+
     def predict_in_context(self, word, sentence, bert, word_occurrence=0, layer=8, glove=False):
         if glove:
             return self.predict(word)
@@ -86,7 +132,7 @@ class FeatureClassifier(object):
         logits = self.nn.forward(x)
         return logits.detach().numpy()
 
-    def predict_top_n_features_in_context(self, word, sentence, bert=None,
+    def predict_top_n_features_in_context(self, word, sentence, n=-1, bert=None,
                                           word_occurrence=0, layer=8, glove=False):
         """
         :vec: optional arg if we already have the predicted feature vector
@@ -95,7 +141,9 @@ class FeatureClassifier(object):
         feats = [self.feature_norms.feature_map.get_object(i) for i in range(len(self.feature_norms.feature_map))]
         df = pd.DataFrame({"Features":list(feats),
              "Values":logits,}).sort_values("Values", ascending=False)
-        return df
+        # for now return bare list of features to maintain compatibility with eval code
+        # TODO update eval code to use a dataframe of the above shape
+        return df.head(n)["Features"]
 
 class FrequencyClassifier(FeatureClassifier):
     """
