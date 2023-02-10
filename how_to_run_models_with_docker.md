@@ -37,7 +37,8 @@ git merge --ff-only origin/master # fast forwards the remote changes over your l
 Now, make sure that the subdirectory `trained_models` contains the model files. (Available on request from Author)
 
 
-```$ ls trained_models
+```
+$ ls trained_models
 model.plsr.buchanan.allbuthomonyms.5k.300components.500max_iters
 model.ffnn.binder.5k.50epochs.0.5dropout.lr1e-4.hsize300
 ```
