@@ -51,11 +51,12 @@ We can create a volume using -v option.
 The following command will start the docker container with a mounted volume containing the files in the features_in_context directory
 
 
-`$ docker run -p 8888:8888 -v /Users/yourname/path/to/features_in_context:/home/jovyan/work jupyter/minimal-notebook`
+`$ docker run -p 8888:8888 -v /Users/yourname/path/to/features_in_context:/home/jovyan/work/features_in_context jupyter/minimal-notebook`
 
 If you want to use the current working directory, use $(pwd).
 
-`$ docker run -p 8888:8888 -v $(pwd):/home/jovyan/work jupyter/minimal-notebook`
+
+`$ docker run -p 8888:8888 -v $(pwd):/home/jovyan/work/features_in_context jupyter/minimal-notebook`
 
 
 ## Predict semantic features inside the container
@@ -65,7 +66,7 @@ Inside docker there is a Launcher that allows you to run a terminal, open and ed
 
 Open the terminal and run
 
-```$ pip install -r `requirements.txt` ```
+```$ pip install -r requirements.txt ```
 
 Now on the left menu use the file tree to navigate to `notebooks/examine_features_in_context.ipynb`
 
