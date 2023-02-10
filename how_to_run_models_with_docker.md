@@ -57,6 +57,9 @@ If you want to use the current working directory, use $(pwd).
 `$ docker run -p 8888:8888 -v $(pwd):/home/jovyan/work jupyter/minimal-notebook`
 
 
+## Predict semantic features inside the container
+
+
 Inside docker there is a Launcher that allows you to run a terminal, open and edit jupyter notebooks in our mounted Volume
 
 Open the terminal and run
