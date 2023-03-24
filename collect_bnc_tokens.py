@@ -3,7 +3,6 @@ import csv
 
 class BNC():
 
-
     def __init__(self):
         corpus = bnc.BNCCorpusReader(root='../data/BNC/Texts/', fileids=r'[A-K]/\w*/\w*\.xml')
         length = bnc_length()
@@ -37,13 +36,7 @@ def bnc_sentence_to_string(sentence):
     return " ".join(words)
 
 
-
-
-
-
-
-
-def collect_bnc_tokens_for_words(words, max_num_examples, override=False, outfile):
+def collect_bnc_tokens_for_words(words, max_num_examples, outfile, override=False):
 
     
     #filename = outfile

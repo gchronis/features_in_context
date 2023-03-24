@@ -66,19 +66,19 @@ class PLSRClassifier(FeatureClassifier):
         
         return (word, logits)
 
-    def predict_in_context(self, word, sentence, bert, glove=False):
+    def predict_in_context(self, word, sentence, bert, word_occurrence=0, layer=8, glove=False):
         if glove:
             return self.predict(word)
             
         # generate bert vector for word
-        vec = bert.get_bert_vectors_for(word, sentence)
-        # get the layer we care about
-        vec = vec[8]
+        vec = bert.get_bert_vectors_for(word, sentence, word_occurrence)[layer]
+        vec = np.array([vec.detach().numpy()])
+
 
         # reshape to be vertical
         vec = vec.reshape(1, -1)
-        #print("after reshape")
-        #print(vec.shape)
+
+        ### TODO VEC IS THE WRING TYPE OF NYMPY THING HERE. IT HAS GRAD AND IT SHOULDNT
 
 
         logits = self.model.predict(vec)
