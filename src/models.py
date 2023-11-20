@@ -76,6 +76,8 @@ class FeatureClassifier(object):
     def predict_from_single_context_vector(self, word, vec):
         # code from form_input bc we already have embedding
         x =  torch.from_numpy(vec).float()
+        x = x.reshape(1, -1)
+
         logits = self.nn.forward(x)
         logits = logits.detach().numpy()
         return (word, logits)
