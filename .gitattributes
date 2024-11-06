@@ -1,1 +1,6 @@
 data filter=lfs diff=lfs merge=lfs -text
+trained_models/main_efe0a_00006_6_clusters=5,embedding_type=bert,model=plsr,plsr_max_iter=500,plsr_n_components=100,train_data=mc_rae_real_2022-10-12_00-08-44 filter=lfs diff=lfs merge=lfs -text
+trained_models/model.ffnn.binder.5k.50epochs.0.5dropout.lr1e-4.hsize300 filter=lfs diff=lfs merge=lfs -text
+trained_models/model.plsr.buchanan.allbuthomonyms.5k.300components.500max_iters filter=lfs diff=lfs merge=lfs -text
+trained_models/model.plsr.buchanan.allbuthomonyms.5k.300components.500max_iters_sklearn_1.1.3 filter=lfs diff=lfs merge=lfs -text
+trained_models/* filter=lfs diff=lfs merge=lfs -text
