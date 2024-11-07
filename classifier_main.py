@@ -14,6 +14,7 @@ import time
 from torch.utils.data import random_split
 import torch
 from ray import tune
+from ray import train as raytrain
 import scipy.stats as stats
 
 def _parse_args():
@@ -118,11 +119,11 @@ def load_feature_norms(args):
         print("gets here")
         feature_norms = McRaeFeatureNorms('./data/external/mcrae/CONCS_FEATS_concstats_brm/concepts_features-Table1.csv')
     elif args['train_data'] == 'mc_rae_subset':
-        feature_norms = BuchananFeatureNorms('data/external/buchanan/cue_feature_words.csv', subset='mc_rae_subset')
+        feature_norms = BuchananFeatureNorms('./data/external/buchanan/cue_feature_words.csv', subset='mc_rae_subset')
     elif args['train_data'] == 'buchanan':
-        feature_norms = BuchananFeatureNorms('data/external/buchanan/cue_feature_words.csv')
+        feature_norms = BuchananFeatureNorms('./data/external/buchanan/cue_feature_words.csv')
     elif args['train_data'] == 'binder':
-        feature_norms = BinderFeatureNorms('data/external/binder_word_ratings/WordSet1_Ratings.csv')
+        feature_norms = BinderFeatureNorms('./data/external/binder_word_ratings/WordSet1_Ratings.csv')
     else:
         raise Exception("dataset not implemented")
     return feature_norms
@@ -195,14 +196,14 @@ def train_1_fold(feature_norms, embs, args):
     print("=======DEV SET=======")
     results = evaluate(model, dev_words, feature_norms, args, debug='false')
     print(results)
-    tune.report(
-        dev_MAP_at_10=results['MAP_at_10'],
-        dev_MAP_at_20=results['MAP_at_20'],
-        dev_MAP_at_k=results['MAP_at_k'],
-        dev_correl=results['correl'],
-        dev_cos=results['cos'],
-        dev_rsquare=results['rsquare'],
-        dev_mse=results['mse']
+    raytrain.report(
+        {"dev_MAP_at_10": results['MAP_at_10'],
+        "dev_MAP_at_20": results['MAP_at_20'],
+        "dev_MAP_at_k": results['MAP_at_k'],
+        "dev_correl": results['correl'],
+        "dev_cos": results['cos'],
+        "dev_rsquare": results['rsquare'],
+        "dev_mse": results['mse']}
     )
 
     print("=======FINAL PRINTING ON TEST SET=======")
@@ -210,14 +211,14 @@ def train_1_fold(feature_norms, embs, args):
     for test_word in test_words:
         print(test_word)
     results = evaluate(model, test_words, feature_norms, args, debug='false')
-    tune.report(
-        test_MAP_at_10=results['MAP_at_10'],
-        test_MAP_at_20=results['MAP_at_20'],
-        test_MAP_at_k=results['MAP_at_k'],
-        test_correl=results['correl'],
-        test_cos=results['cos'],
-        test_rsquare=results['rsquare'],
-        test_mse=results['mse']
+    raytrain.report(
+        {"test_MAP_at_10": results['MAP_at_10'],
+        "test_MAP_at_20": results['MAP_at_20'],
+        "test_MAP_at_k": results['MAP_at_k'],
+        "test_correl": results['correl'],
+        "test_cos": results['cos'],
+        "test_rsquare": results['rsquare'],
+        "test_mse": results['mse']}
     )
 
     if (args['save_path'] is not None):
@@ -273,7 +274,7 @@ def kfold_crossvalidation(feature_norms, embs, args):
     all_folds = pd.DataFrame.from_records(dev_stats)
     print(dev_stats)
     average = all_folds.mean(axis=0)
-    tune.report(
+    train.report(
         dev_MAP_at_10=average.MAP_at_10,
         dev_MAP_at_20=average.MAP_at_20,
         dev_MAP_at_k=average.MAP_at_k,
